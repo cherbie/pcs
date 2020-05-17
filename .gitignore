@@ -1,6 +1,5 @@
 # System Files
 .DS_Store
 
-
 # Object Files
-.o
+*.o
