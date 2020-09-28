@@ -7,15 +7,13 @@ void bubble_sort(std::vector<int>&);
 int main(int argc, char *argv[]) {
     int n; // number of elements in array
     std::cin >> n;
-    std::vector<int> a (n);
+    std::vector<int> a(n);
 
-    // instantiate unsorted array
-    int element;
-    for (int i = 0; i < n ; i++) {
-        std::cin >> element;
-        a[i] = element;
-    }
-    
+    // initialize unsorted array values
+	for (std::vector<int>::iterator iter = a.begin(); iter != a.end(); iter++) {
+		std::cin >> *iter;
+	}
+
     bubble_sort(a);
 
     // print sorted array contents
