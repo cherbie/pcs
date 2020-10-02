@@ -6,6 +6,11 @@ There are many algorithms for sorting. The effiecient general sorting algorithms
 
 ## Algorithms
 
+- Bubble Sort
+- Merge Sort
+- Quick Sort
+- Counting Sort
+
 ### Bubble Sort
 
 Elements "bubble" up in the array according to their values
@@ -49,3 +54,7 @@ Various _"levels"_ of the recursion
 1. `[1, 3, 6, 2, 8, 2, 5, 9]`
 2. `[1, 3, 6, 2]` - `[8, 2, 5, 9]`
 3. `[1, 3]` - `[6, 2]` - `[8, 2]` - `[5, 9]`
+
+### Quick Sort
+
+A divide and conquer algorithm that works by selecting a _'pivot'_ from the array and partitioning the other elements into two sub-arrays, according to whether they are less than or greater than the _'pivot'_. The sub-arrays are then sorted recursively which can be done _in-place_ requiring a small amount of additional memory.
