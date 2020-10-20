@@ -29,16 +29,14 @@ int main(int getc, char* argv[]) {
 int binary_search(vector<int> &a, int &element) {
     sort(a.begin(), a.end()); // sort vector
     
-    int t = 0, v = a.size() - 1;
+    int k = 0; // lower index bound
+    int len = a.size();
 
-    while( t < v ) {
-        int k = (t + v) / 2;
-        if (a.at(k) == element)
-            return k;
-        else if (a.at(k) > element)
-            v = k - 1;
-        else t = k + 1; 
+    for (int b = len/2; b >= 1; b /= 2) { // b remains upper index bound
+        while (k+b < len && a.at(k+b) <= element) k += b;
     }
 
+    if (a.at(k) == element)
+        return k;
     return -1;
 }
