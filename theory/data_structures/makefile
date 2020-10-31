@@ -1,12 +1,22 @@
-GCC=g++-10 --std=c++11 -Wall -Werror -pedantic
+CXX = g++-10
+CPPFLAGS = -std=c++11 -Wall -Werror -pedantic -g3
+SRC_DIRS ?= ./src
+BUILD_DIR ?= ./build
 
-all: linked_list
+SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
+OBJS := $(SRCS:$(SRC_DIRS)/%=$(BUILD_DIR)/%.o)
+HEADERS := $(shell find $(SRC_DIRS) -name *.hpp)
 
-linked_list: linked_list.o
-	$(GCC) -o linked_list linked_list.o 
+$(BUILD_DIR)/run : $(OBJS)
+	$(CXX) $(CPPFLAGS) -o $@ $^
 
-linked_list.o: linked_list.cpp linked_list.h
-	$(GCC) -c linked_list.cpp linked_list.h
+$(BUILD_DIR)/%.cpp.o : $(SRC_DIRS)/%.cpp $(HEADERS)
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CPPFLAGS) -o $@ -c $<
+
+.PHONY: clean
 
 clean:
-	rm -rfv *.o *.h.gch
+	rm -rfv $(BUILD_DIR)/*
+
+MKDIR_P ?= mkdir -p

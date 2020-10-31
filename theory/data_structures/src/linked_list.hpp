@@ -1,8 +1,8 @@
-#include <iostream>
 #include <cstdlib>
-#include <signal.h>
 #include <unistd.h>
-#include <vector>
+
+#ifndef _LINKED_LIST_H_
+#define _LINKED_LIST_H_
 
 template <typename T>
 struct Node {
@@ -22,6 +22,4 @@ class LinkedList {
         T *peek(void);
         bool isEmpty(void);
 };
-
-int test_link_list(LinkedList<int>&);
-void signal_callback_handler(int);
+#endif
