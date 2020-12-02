@@ -1,66 +1,178 @@
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <list>
 #include <cstdlib>
 #include <memory>
+#include <iterator>
+#include <set>
+#include "tests.h"
 
 /**
 TODO:
  - stdin will be using the index values of integers starting at 1 and not 0 ... this currently breaks the program
- - Implement the fibonacci queue logic
+ - Implement the traversal logic
  - handle node value updates
  - test node value updates
 **/
 
 int main(int argc, char* argv[]);
 
-class AdjacencyList {
+struct Node {
+    unsigned int id;
+    std::shared_ptr<long> value;
+    std::list<std::shared_ptr<Node>> edges; // adjacency list
+}
+
+class Traversal {
+    // TODO
     private:
-        std::vector<std::shared_ptr<long>> _nodes;
-        std::vector<std::list<unsigned int>> _edges;
+        std::vector<std::shared_ptr<Node>> _bfs; // breadth first search sequence
+
+    private:
+        void _set_fibonacci_heap();
     
     public:
-        AdjacencyList();
-        AdjacencyList(unsigned int);
-        ~AdjacencyList();
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = long;
+        using difference_type = long;
+        using pointer = long*;
+        using reference = long&;
+    
+    public:
+        Traversal();
+        ~Traversal();
+        operator++();
+        operator--();
+}
+
+class Tree {
+    private:
+        std::vector<std::shared_ptr<Node>> _nodes;
+
+        friend class Traversal;
+    
+    public:
+        Tree();
+        Tree(unsigned int);
+        ~Tree();
 
     public:
         void add_edge(unsigned int, unsigned int);
-        std::shared_ptr<long> get(unsigned int);
-};
+        std::shared_ptr<Node> get(unsigned int);
+}
 
-// struct Node {
-//     std::shared_ptr<long> value;
-//     std::list<std::shared_ptr<Node>> children;
-// }
+Traversal::Traversal(): _bfs(std::vector<std::shared_ptr<Node>>()) { 
+    this->_set_fibonacci_heap();
+}
 
-class FibonacciHeap {
+Traversal::Traversal(unsigned int num_nodes): _bfs(std::vector<std::shared_ptr<Node>>(num_nodes)) {
+    this->_set_fibonacci_heap();
+}
+
+Traversal::~Traversal() { }
+
+/**
+ Note:
+ - Graph assumed to consist entirely of connected components (expand by implementing priority queue of trees)
+*/
+void Traversal::_set_fibonacci_heap() {
+    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return *(left->value) < *(right->value) };
+    std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, decltype(less_than_cmp_nodes)> p_queue(less_than_cmp_nodes);
+
+    for (auto it = this->_nodes.begin(); it != this->_nodes.end(); ++it) {
+        p_queue.push(*it);
+    }
+
+    this->_bfs.clear();
+    {
+        std::set<unsigned int> seen = std::set<unsigned int>(this->_nodes.size());
+        std::queue<std::shared_ptr<Node>> queue = std::queue<std::shared_ptr<Node>>(this->_nodes.size());
+
+        auto it_window = p_queue.begin();
+        auto it_end = p_queue.end();
+        while (seen.size() < num_nodes && it_window != it_end) {
+            std::shared_ptr<Node> node = *it_window;
+            this->_bfs.push_back(node);
+            auto edge_it_begin = node->edges.begin();
+            auto edge_it_end = node->edges.end();
+            for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it) {
+                std::shared_ptr<Node> child = *edge_it;
+                if (seen.find(child->id) == seen.end()) { // not yet seen
+                    this->_bfs.push_back(child);
+                    seen.insert(child->id);
+                }
+            }
+            ++it_window;
+        }
+    }
+}
+
+class LoraxAlgorithm {
     private:
-        // std::shared_ptr<Node> _head; // TODO - priority queue / queue of trees required!
-        AdjacencyList _adjacency_list;
-    
-    private:
-        /** Organise into fibonacci heap */
-        void _sort();
+        Tree _tree;
     
     public:
-        FibonacciHeap();
-        FibonacciHeap(unsigned int);
-        ~FibonacciHeap();
-    
-    public:
-        // friend class AdjacencyList; // needed ?
-        // // TODO
-        // friend class Iterator; // safe traversal of tree / graph
+        LoraxAlgorithm();
+        LoraxAlgorithm(unsigned int);
+        ~LoraxAlgorithm();
 
     public:
+        /** Number of roots crossing edge */
+        void search(unsigned int, unsigned int);
         /** Update node value */
         void update_node(unsigned int, long);
         /** Add edge to graph */
         void add_edge(unsigned int, unsigned int);
-        /** Traverse through graph calculating minimum flow between two vertices */
-        long min_flow(unsigned int, unsigned int);
 };
+
+Tree::Tree(): _nodes(std::vector<shared_ptr<Node>>()) { }
+
+Tree::Tree(unsigned int num_nodes): _nodes(std::vector<shared_ptr<Node>>()) {
+    for (unsigned int i = 0; i < num_nodes; ++i) {
+        std::shared_ptr<Node> node = std::make_shared<Node>();
+        node->id = i;
+        node->value = std::make_shared<long>(0);
+        node->edges = std::list<std::shared_ptr<Node>>();
+        this->_nodes.push_back(node);
+    }
+}
+
+Tree::~Tree() { }
+
+// Add edge to node graph
+void Tree::add_edge(unsigned int parent_id, unsigned int child_id) {
+    std::shared_ptr<Node> parent_node = this->_nodes.at(parent_id);
+    std::shared_ptr<Node> child_node = this->_nodes.at(child_id);
+    parent_node->edges.push(child_node);
+    child_node->edges.push(parent_node);
+}
+
+// Get the value / weight of a particular node
+std::shared_ptr<Node> AdjacencyList::get(unsigned int node_id) {
+    return this->_nodes.at(node_id);
+}
+
+LoraxAlgorithm::LoraxAlgorithm(): _tree(Tree()) { }
+
+LoraxAlgorithm::LoraxAlgorithm(unsigned int num_nodes): _tree(Tree(num_nodes)) { }
+
+LoraxAlgorithm::~LoraxAlgorithm() { }
+
+void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child) {
+    this->_tree.add_edge(parent, child);
+}
+
+void LoraxAlgorithm::update_node(unsigned int node_id, long sum) {
+    std::shared_ptr<Node> node = this->_tree.get(node_id);
+    *(node->value) += sum;
+}
+
+long LoraxAlgorithm::search(unsigned int parent, unsigned int child) {
+    // TODO
+}
+
+#ifndef _TESTS_H
 
 int main(int argc, char* argv[]) {
     unsigned int num_tests;
@@ -68,7 +180,7 @@ int main(int argc, char* argv[]) {
     for (unsigned int i = 0; i < num_tests; ++i) {
         unsigned int num_nodes, num_queries;
         std::cin >> num_nodes >> num_queries;
-        FibonacciHeap fib_heap = FibonacciHeap(num_nodes);
+        LoraxAlgorithm fib_heap = LoraxAlgorithm(num_nodes);
 
         // -- Graph initialisation
         for (unsigned int j = 0; j < num_nodes - 1; ++j) {
@@ -92,60 +204,10 @@ int main(int argc, char* argv[]) {
     std::exit(EXIT_SUCCESS);
 }
 
-AdjacencyList::AdjacencyList() { }
+#else
 
-AdjacencyList::AdjacencyList(unsigned int num_nodes) {
-    this->_nodes = std::vector<std::shared_ptr<long>> (num_nodes);
-    for (unsigned int i = 0; i < num_nodes; ++i) {
-        this->_nodes.push_back( std::make_shared<long>(0) ); // initialize
-    }
-    this->_edges = std::vector<std::list<unsigned int>> (num_nodes);
-}
-
-AdjacencyList::~AdjacencyList() { }
-
-// Add edge to node graph
-void AdjacencyList::add_edge(unsigned int parent, unsigned int child) {
-    this->_edges.at(parent).push_back(child); // todo -- does this work ... get might return a copy?
-    this->_edges.at(child).push_back(parent);
-}
-
-// Get the value / weight of a particular node
-std::shared_ptr<long> AdjacencyList::get(unsigned int node_id) {
-    return this->_nodes.at(node_id);
-}
-
-FibonacciHeap::FibonacciHeap() { }
-
-FibonacciHeap::FibonacciHeap(unsigned int num_nodes) {
-    this->_adjacency_list = AdjacencyList (num_nodes);
-    // this->_head = nullptr; // todo priority queue
-}
-
-FibonacciHeap::~FibonacciHeap() { }
-
-void FibonacciHeap::add_edge(unsigned int parent, unsigned int child) {
-    this->_adjacency_list.add_edge(parent, child);
+int main(int argc, char* argv[]) {
     
-    // Perform this operation in sort ... no point constructing graph when it will be broken down in the sort
-    // std::shared_ptr<long> value = this->_adjacency_list.get(child);
-
-    // std::shared_ptr<Node> new_node = std::make_shared<Node>();
-    // new_node->value = value;
-    // new_node->children = std::list<std::shared_ptr<Node>>();
-
-    // if (this->_head == nullptr) {
-    //     this->_head = new_node;
-    // } else if (*this->_head->value > *value) { // TODO - convert to do {} while(); ?
-    //     new_node->children.push_back(this->_head);
-    //     this->_head = new_node;
-    // } else {
-    //     // TODO - Traverse until value is greater than or empty children node is reached
-    //     this->_head->children.push_back(new_node);
-    // }
 }
 
-void FibonacciHeap::update_node(unsigned int node_id, long sum) {
-    std::shared_ptr<long> p_node_value = this->_adjacency_list.get(node_id);
-    *p_node_value += sum;
-}
+#endif

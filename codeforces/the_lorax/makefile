@@ -5,7 +5,7 @@ BUILD_DIR ?= ./build
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:$(SRC_DIRS)/%=$(BUILD_DIR)/%.o)
-HEADERS := $(shell find $(SRC_DIRS) -name *.h)
+HEADERS := $(shell find $(SRC_DIRS) -name *.hpp)
 
 $(BUILD_DIR)/run : $(OBJS)
 	$(CXX) $(CPPFLAGS) -o $@ $^
