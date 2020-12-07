@@ -6,7 +6,7 @@
 #include <memory>
 #include <iterator>
 #include <set>
-#include "tests.h"
+// #include "tests.hpp"
 
 /**
 TODO:
@@ -16,187 +16,203 @@ TODO:
  - test node value updates
 **/
 
-int main(int argc, char* argv[]);
+int main(int argc, char *argv[]);
 
-struct Node {
+struct Node
+{
     unsigned int id;
     std::shared_ptr<long> value;
     std::list<std::shared_ptr<Node>> edges; // adjacency list
+};
+
+class Tree
+{
+private:
+    std::vector<std::shared_ptr<Node>> _nodes;
+    std::vector<std::shared_ptr<Node>> _bfs; // breadth first search sequence
+
+public:
+    Tree();
+    Tree(unsigned int num_nodes);
+    ~Tree();
+
+private:
+    void _set_fibonacci_heap();
+
+public:
+    void add_edge(unsigned int parent, unsigned int child);
+    std::shared_ptr<Node> get(unsigned int node_id);
+    std::vector<std::shared_ptr<Node>>::iterator begin();
+    std::vector<std::shared_ptr<Node>>::iterator end();
+};
+
+class LoraxAlgorithm
+{
+private:
+    Tree _tree;
+
+public:
+    LoraxAlgorithm();
+    LoraxAlgorithm(unsigned int num_nodes);
+    ~LoraxAlgorithm();
+
+public:
+    /** Number of roots crossing edge */
+    long search(unsigned int parent_id, unsigned int child_id);
+    /** Update node value */
+    void update_node(unsigned int node_id, long value);
+    /** Add edge to graph */
+    void add_edge(unsigned int parent_id, unsigned int child_id);
+};
+
+Tree::Tree() : _nodes(), _bfs() {}
+
+Tree::Tree(unsigned int num_nodes) : _nodes(num_nodes + 1), _bfs()
+{
+    for (unsigned int index = 1; index <= num_nodes; ++index)
+    {
+        std::shared_ptr<Node> node = std::make_shared<Node>();
+        node->id = index;
+        node->value = std::make_shared<long>(0);
+        this->_nodes.push_back(node);
+    }
 }
 
-class Traversal {
-    // TODO
-    private:
-        std::vector<std::shared_ptr<Node>> _bfs; // breadth first search sequence
+Tree::~Tree() {}
 
-    private:
-        void _set_fibonacci_heap();
-    
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = long;
-        using difference_type = long;
-        using pointer = long*;
-        using reference = long&;
-    
-    public:
-        Traversal();
-        ~Traversal();
-        operator++();
-        operator--();
+// Add edge to node graph
+void Tree::add_edge(unsigned int parent_id, unsigned int child_id)
+{
+    std::shared_ptr<Node> parent_node = this->_nodes.at(parent_id - 1);
+    std::shared_ptr<Node> child_node = this->_nodes.at(child_id - 1);
+    parent_node->edges.push_back(child_node); // could be a problem here ... circular deconstruction
+    child_node->edges.push_back(parent_node);
 }
 
-class Tree {
-    private:
-        std::vector<std::shared_ptr<Node>> _nodes;
-
-        friend class Traversal;
-    
-    public:
-        Tree();
-        Tree(unsigned int);
-        ~Tree();
-
-    public:
-        void add_edge(unsigned int, unsigned int);
-        std::shared_ptr<Node> get(unsigned int);
+// Get the value / weight of a particular node
+std::shared_ptr<Node> Tree::get(unsigned int node_id)
+{
+    return this->_nodes.at(node_id - 1);
 }
 
-Traversal::Traversal(): _bfs(std::vector<std::shared_ptr<Node>>()) { 
+std::vector<std::shared_ptr<Node>>::iterator Tree::begin()
+{
     this->_set_fibonacci_heap();
+    return this->_bfs.begin();
 }
 
-Traversal::Traversal(unsigned int num_nodes): _bfs(std::vector<std::shared_ptr<Node>>(num_nodes)) {
-    this->_set_fibonacci_heap();
+std::vector<std::shared_ptr<Node>>::iterator Tree::end()
+{
+    return this->_bfs.end();
 }
-
-Traversal::~Traversal() { }
 
 /**
  Note:
  - Graph assumed to consist entirely of connected components (expand by implementing priority queue of trees)
 */
-void Traversal::_set_fibonacci_heap() {
-    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return *(left->value) < *(right->value) };
+void Tree::_set_fibonacci_heap()
+{
+    unsigned int num_nodes = this->_nodes.size();
+    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return *(left->value) < *(right->value); };
     std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, decltype(less_than_cmp_nodes)> p_queue(less_than_cmp_nodes);
 
-    for (auto it = this->_nodes.begin(); it != this->_nodes.end(); ++it) {
+    for (auto it = this->_nodes.begin(); it != this->_nodes.end(); ++it)
+    {
         p_queue.push(*it);
     }
 
     this->_bfs.clear();
-    {
-        std::set<unsigned int> seen = std::set<unsigned int>(this->_nodes.size());
-        std::queue<std::shared_ptr<Node>> queue = std::queue<std::shared_ptr<Node>>(this->_nodes.size());
 
-        auto it_window = p_queue.begin();
-        auto it_end = p_queue.end();
-        while (seen.size() < num_nodes && it_window != it_end) {
-            std::shared_ptr<Node> node = *it_window;
+    {
+        std::set<unsigned int> seen = std::set<unsigned int>();
+        std::queue<std::shared_ptr<Node>> queue = std::queue<std::shared_ptr<Node>>();
+
+        while (seen.size() < num_nodes && p_queue.size() > 0)
+        {
+            std::shared_ptr<Node> node = p_queue.top();
             this->_bfs.push_back(node);
             auto edge_it_begin = node->edges.begin();
             auto edge_it_end = node->edges.end();
-            for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it) {
+            for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it)
+            {
                 std::shared_ptr<Node> child = *edge_it;
-                if (seen.find(child->id) == seen.end()) { // not yet seen
+                if (seen.find(child->id) == seen.end())
+                {
                     this->_bfs.push_back(child);
                     seen.insert(child->id);
                 }
             }
-            ++it_window;
+            p_queue.pop();
         }
     }
 }
 
-class LoraxAlgorithm {
-    private:
-        Tree _tree;
-    
-    public:
-        LoraxAlgorithm();
-        LoraxAlgorithm(unsigned int);
-        ~LoraxAlgorithm();
+LoraxAlgorithm::LoraxAlgorithm() : _tree() {}
 
-    public:
-        /** Number of roots crossing edge */
-        void search(unsigned int, unsigned int);
-        /** Update node value */
-        void update_node(unsigned int, long);
-        /** Add edge to graph */
-        void add_edge(unsigned int, unsigned int);
-};
+LoraxAlgorithm::LoraxAlgorithm(unsigned int num_nodes) : _tree(num_nodes) {}
 
-Tree::Tree(): _nodes(std::vector<shared_ptr<Node>>()) { }
+LoraxAlgorithm::~LoraxAlgorithm() {}
 
-Tree::Tree(unsigned int num_nodes): _nodes(std::vector<shared_ptr<Node>>()) {
-    for (unsigned int i = 0; i < num_nodes; ++i) {
-        std::shared_ptr<Node> node = std::make_shared<Node>();
-        node->id = i;
-        node->value = std::make_shared<long>(0);
-        node->edges = std::list<std::shared_ptr<Node>>();
-        this->_nodes.push_back(node);
-    }
-}
-
-Tree::~Tree() { }
-
-// Add edge to node graph
-void Tree::add_edge(unsigned int parent_id, unsigned int child_id) {
-    std::shared_ptr<Node> parent_node = this->_nodes.at(parent_id);
-    std::shared_ptr<Node> child_node = this->_nodes.at(child_id);
-    parent_node->edges.push(child_node);
-    child_node->edges.push(parent_node);
-}
-
-// Get the value / weight of a particular node
-std::shared_ptr<Node> AdjacencyList::get(unsigned int node_id) {
-    return this->_nodes.at(node_id);
-}
-
-LoraxAlgorithm::LoraxAlgorithm(): _tree(Tree()) { }
-
-LoraxAlgorithm::LoraxAlgorithm(unsigned int num_nodes): _tree(Tree(num_nodes)) { }
-
-LoraxAlgorithm::~LoraxAlgorithm() { }
-
-void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child) {
+void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child)
+{
     this->_tree.add_edge(parent, child);
 }
 
-void LoraxAlgorithm::update_node(unsigned int node_id, long sum) {
+void LoraxAlgorithm::update_node(unsigned int node_id, long sum)
+{
     std::shared_ptr<Node> node = this->_tree.get(node_id);
     *(node->value) += sum;
 }
 
-long LoraxAlgorithm::search(unsigned int parent, unsigned int child) {
-    // TODO
+long LoraxAlgorithm::search(unsigned int parent, unsigned int child)
+{
+    auto begin_it = this->_tree.begin();
+    auto end_it = this->_tree.end();
+    long sum = 0;
+    for (auto it = begin_it; it != end_it; ++it)
+    {
+        std::shared_ptr<Node> node_ptr = *begin_it;
+        sum += *(node_ptr->value);
+        if (node_ptr->id == parent - 1 || node_ptr->id == child - 1)
+        {
+            break;
+        }
+    }
+    return sum;
 }
 
 #ifndef _TESTS_H
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     unsigned int num_tests;
     std::cin >> num_tests;
-    for (unsigned int i = 0; i < num_tests; ++i) {
+    for (unsigned int i = 0; i < num_tests; ++i)
+    {
         unsigned int num_nodes, num_queries;
         std::cin >> num_nodes >> num_queries;
-        LoraxAlgorithm fib_heap = LoraxAlgorithm(num_nodes);
+        LoraxAlgorithm lorax_alg(num_nodes);
 
         // -- Graph initialisation
-        for (unsigned int j = 0; j < num_nodes - 1; ++j) {
+        for (unsigned int j = 0; j < num_nodes - 1; ++j)
+        {
             unsigned int parent, child;
             std::cin >> parent >> child;
-            fib_heap.add_edge(parent, child);
+            lorax_alg.add_edge(parent, child);
         }
 
         // -- Queries
-        for (unsigned int j = 0; j < num_queries; ++j) {
+        for (unsigned int j = 0; j < num_queries; ++j)
+        {
             unsigned int parent, child;
             unsigned long query_value;
             std::cin >> parent >> child >> query_value;
-            if ( query_value == 0) {
+            if (query_value == 0)
+            {
                 std::cout << "DEBUG: sort and find minimum flow between (" << parent << ", " << child << ")" << std::endl;
-            } else {
+            }
+            else
+            {
                 std::cout << "DEBUG: update value for the following nodes: (" << parent << ", " << child << ") :: to -> " << query_value << std::endl;
             }
         }
@@ -206,8 +222,9 @@ int main(int argc, char* argv[]) {
 
 #else
 
-int main(int argc, char* argv[]) {
-    
+int main(int argc, char *argv[])
+{
+    std::exit(EXIT_SUCCESS);
 }
 
 #endif
