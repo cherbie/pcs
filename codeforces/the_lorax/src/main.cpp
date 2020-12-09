@@ -21,8 +21,8 @@ int main(int argc, char *argv[]);
 struct Node
 {
     unsigned int id;
-    std::shared_ptr<long> value;
-    std::list<std::shared_ptr<Node>> edges; // adjacency list
+    long value = 0;
+    std::list<std::weak_ptr<Node>> edges; // adjacency list
 };
 
 class Tree
@@ -44,6 +44,7 @@ public:
     std::shared_ptr<Node> get(unsigned int node_id);
     std::vector<std::shared_ptr<Node>>::iterator begin();
     std::vector<std::shared_ptr<Node>>::iterator end();
+    unsigned int size() const;
 };
 
 class LoraxAlgorithm
@@ -67,13 +68,12 @@ public:
 
 Tree::Tree() : _nodes(), _bfs() {}
 
-Tree::Tree(unsigned int num_nodes) : _nodes(num_nodes + 1), _bfs()
+Tree::Tree(unsigned int num_nodes) : _nodes(), _bfs()
 {
     for (unsigned int index = 1; index <= num_nodes; ++index)
     {
         std::shared_ptr<Node> node = std::make_shared<Node>();
         node->id = index;
-        node->value = std::make_shared<long>(0);
         this->_nodes.push_back(node);
     }
 }
@@ -83,10 +83,12 @@ Tree::~Tree() {}
 // Add edge to node graph
 void Tree::add_edge(unsigned int parent_id, unsigned int child_id)
 {
-    std::shared_ptr<Node> parent_node = this->_nodes.at(parent_id - 1);
-    std::shared_ptr<Node> child_node = this->_nodes.at(child_id - 1);
-    parent_node->edges.push_back(child_node); // could be a problem here ... circular deconstruction
-    child_node->edges.push_back(parent_node);
+    std::shared_ptr<Node> parent_p = this->_nodes.at(parent_id - 1);
+    std::shared_ptr<Node> child_p = this->_nodes.at(child_id - 1);
+    std::weak_ptr<Node> parent_wp = parent_p;
+    std::weak_ptr<Node> child_wp = child_p;
+    parent_p->edges.push_back(child_wp); // could be a problem here ... circular deconstruction
+    child_p->edges.push_back(parent_wp);
 }
 
 // Get the value / weight of a particular node
@@ -106,6 +108,11 @@ std::vector<std::shared_ptr<Node>>::iterator Tree::end()
     return this->_bfs.end();
 }
 
+unsigned int Tree::size() const
+{
+    return this->_nodes.size();
+}
+
 /**
  Note:
  - Graph assumed to consist entirely of connected components (expand by implementing priority queue of trees)
@@ -113,38 +120,45 @@ std::vector<std::shared_ptr<Node>>::iterator Tree::end()
 void Tree::_set_fibonacci_heap()
 {
     unsigned int num_nodes = this->_nodes.size();
-    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return *(left->value) < *(right->value); };
+    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return left->value < right->value; };
     std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, decltype(less_than_cmp_nodes)> p_queue(less_than_cmp_nodes);
 
     for (auto it = this->_nodes.begin(); it != this->_nodes.end(); ++it)
     {
+        std::cout << (*it)->id << " {" << (*it)->value << "} | ";
         p_queue.push(*it);
     }
+    std::cout << std::endl;
 
     this->_bfs.clear();
 
-    {
-        std::set<unsigned int> seen = std::set<unsigned int>();
-        std::queue<std::shared_ptr<Node>> queue = std::queue<std::shared_ptr<Node>>();
+    std::set<unsigned int> seen = std::set<unsigned int>();
 
-        while (seen.size() < num_nodes && p_queue.size() > 0)
+    while (seen.size() < num_nodes && !p_queue.empty())
+    {
+        std::shared_ptr<Node> node = p_queue.top();
+        p_queue.pop();
+        std::cout << node->id << " {" << node->value << "} | ";
+        if (seen.find(node->id) != seen.end())
         {
-            std::shared_ptr<Node> node = p_queue.top();
-            this->_bfs.push_back(node);
-            auto edge_it_begin = node->edges.begin();
-            auto edge_it_end = node->edges.end();
-            for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it)
+            continue;
+        }
+        this->_bfs.push_back(node);
+        seen.insert(node->id);
+        auto edge_it_begin = node->edges.begin();
+        auto edge_it_end = node->edges.end();
+        for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it)
+        {
+            std::shared_ptr<Node> child = (*edge_it).lock();
+            if (seen.find(child->id) == seen.end())
             {
-                std::shared_ptr<Node> child = *edge_it;
-                if (seen.find(child->id) == seen.end())
-                {
-                    this->_bfs.push_back(child);
-                    seen.insert(child->id);
-                }
+                std::cout << child->id << " {" << child->value << "} | ";
+                this->_bfs.push_back(child);
+                seen.insert(child->id);
             }
-            p_queue.pop();
         }
     }
+    std::cout << std::endl;
 }
 
 LoraxAlgorithm::LoraxAlgorithm() : _tree() {}
@@ -161,7 +175,7 @@ void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child)
 void LoraxAlgorithm::update_node(unsigned int node_id, long sum)
 {
     std::shared_ptr<Node> node = this->_tree.get(node_id);
-    *(node->value) += sum;
+    node->value += sum;
 }
 
 long LoraxAlgorithm::search(unsigned int parent, unsigned int child)
@@ -169,15 +183,28 @@ long LoraxAlgorithm::search(unsigned int parent, unsigned int child)
     auto begin_it = this->_tree.begin();
     auto end_it = this->_tree.end();
     long sum = 0;
+    bool parent_seen = 0;
+    // long parent_value = 0;
     for (auto it = begin_it; it != end_it; ++it)
     {
-        std::shared_ptr<Node> node_ptr = *begin_it;
-        sum += *(node_ptr->value);
-        if (node_ptr->id == parent - 1 || node_ptr->id == child - 1)
+        std::shared_ptr<Node> node_p = *it;
+        std::cout << node_p->id << " {" << node_p->value << "} | ";
+        sum += node_p->value;
+        if (node_p->id == parent || node_p->id == child)
         {
-            break;
+            if (!parent_seen)
+            {
+                // parent_value = node_p->value;
+                parent_seen = true;
+            }
+            else
+            {
+                sum -= node_p->value;
+                break;
+            }
         }
     }
+    std::cout << std::endl;
     return sum;
 }
 
@@ -191,29 +218,30 @@ int main(int argc, char *argv[])
     {
         unsigned int num_nodes, num_queries;
         std::cin >> num_nodes >> num_queries;
-        LoraxAlgorithm lorax_alg(num_nodes);
+        LoraxAlgorithm lorax_alg = LoraxAlgorithm(num_nodes);
 
         // -- Graph initialisation
         for (unsigned int j = 0; j < num_nodes - 1; ++j)
         {
             unsigned int parent, child;
             std::cin >> parent >> child;
-            lorax_alg.add_edge(parent, child);
+            lorax_alg.add_edge((unsigned int)parent, (unsigned int)child);
         }
 
         // -- Queries
         for (unsigned int j = 0; j < num_queries; ++j)
         {
             unsigned int parent, child;
-            unsigned long query_value;
+            long query_value;
             std::cin >> parent >> child >> query_value;
             if (query_value == 0)
             {
-                std::cout << "DEBUG: sort and find minimum flow between (" << parent << ", " << child << ")" << std::endl;
+                std::cout << lorax_alg.search(parent, child) << std::endl;
             }
             else
             {
-                std::cout << "DEBUG: update value for the following nodes: (" << parent << ", " << child << ") :: to -> " << query_value << std::endl;
+                lorax_alg.update_node(parent, -query_value);
+                lorax_alg.update_node(child, query_value);
             }
         }
     }

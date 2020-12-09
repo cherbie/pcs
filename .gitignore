@@ -3,3 +3,6 @@
 
 # Object Files
 *.o
+
+# vscode
+.vscode

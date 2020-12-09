@@ -1,4 +1,4 @@
-CXX = g++-10
+CXX = g++
 CPPFLAGS = -std=c++17 -Wall -Werror -pedantic -g3
 SRC_DIRS ?= ./src
 BUILD_DIR ?= ./build
