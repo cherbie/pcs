@@ -6,46 +6,120 @@
 #include <memory>
 #include <iterator>
 #include <set>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 // #include "tests.hpp"
-
-/**
-TODO:
- - stdin will be using the index values of integers starting at 1 and not 0 ... this currently breaks the program
- - Implement the traversal logic
- - handle node value updates
- - test node value updates
-**/
 
 int main(int argc, char *argv[]);
 
-struct Node
-{
-    unsigned int id;
-    long value = 0;
-    std::list<std::weak_ptr<Node>> edges; // adjacency list
-};
-
 class Tree
 {
-private:
-    std::vector<std::shared_ptr<Node>> _nodes;
-    std::vector<std::shared_ptr<Node>> _bfs; // breadth first search sequence
-
 public:
     Tree();
     Tree(unsigned int num_nodes);
     ~Tree();
 
+    friend class FibonacciTree;
+
+    struct Node
+    {
+        unsigned int id;
+        long value = 0;
+        std::list<std::weak_ptr<Node>> edges; // adjacency list
+    };
+
+    void add_edge(unsigned int parent, unsigned int child);
+    std::shared_ptr<Node> get(unsigned int node_id) const;
+    unsigned int size() const;
+
+    static bool compare(std::shared_ptr<Node> largest, std::shared_ptr<Node> next)
+    {
+        return largest->value < next->value;
+    }
+
 private:
-    void _set_fibonacci_heap();
+    std::vector<std::shared_ptr<Node>> _nodes;
+};
+
+class FibonacciTree
+{
+public:
+    struct Node
+    {
+        unsigned int id;
+        long value;
+        std::priority_queue<std::shared_ptr<FibonacciTree::Node>, std::vector<std::shared_ptr<FibonacciTree::Node>>> edges;
+    };
 
 public:
-    void add_edge(unsigned int parent, unsigned int child);
-    std::shared_ptr<Node> get(unsigned int node_id);
-    std::vector<std::shared_ptr<Node>>::iterator begin();
-    std::vector<std::shared_ptr<Node>>::iterator end();
-    unsigned int size() const;
+    FibonacciTree();
+    FibonacciTree(Tree tree);
+    ~FibonacciTree();
+
+    std::shared_ptr<FibonacciTree::Node> get_head() const;
+    static bool compare(std::shared_ptr<FibonacciTree::Node> largest, std::shared_ptr<FibonacciTree::Node> next)
+    {
+        return largest->value < next->value;
+    };
+
+private:
+    std::shared_ptr<FibonacciTree::Node> _head;
+    unsigned int _num_nodes;
 };
+
+FibonacciTree::FibonacciTree() : _head(nullptr), _num_nodes(0)
+{
+}
+
+FibonacciTree::FibonacciTree(Tree tree) : _head(nullptr), _num_nodes(tree._nodes.size())
+{
+    auto max_node_p = std::max_element(tree._nodes.begin(), tree._nodes.end(), Tree::compare);
+
+    if (max_node_p == tree._nodes.end())
+        return;
+
+    std::set<unsigned int> seen;
+    std::queue<std::shared_ptr<FibonacciTree::Node>> bfs_queue;
+
+    this->_head = std::make_shared<FibonacciTree::Node>();
+    this->_head->id = (*max_node_p)->id;
+    this->_head->value = (*max_node_p)->value;
+    bfs_queue.push(this->_head);
+    seen.insert(this->_head->id);
+
+    while (seen.size() < this->_num_nodes && !bfs_queue.empty())
+    {
+        std::shared_ptr<FibonacciTree::Node> ft_node_p = bfs_queue.front();
+        bfs_queue.pop();
+        std::shared_ptr<Tree::Node> t_node_p = tree._nodes.at(ft_node_p->id - 1);
+
+        auto begin_it = t_node_p->edges.begin();
+        auto end_it = t_node_p->edges.end();
+        for (auto edge_it = begin_it; edge_it != end_it; ++edge_it)
+        {
+            std::shared_ptr<Tree::Node> t_node_p_child = edge_it->lock();
+
+            if (seen.find(t_node_p_child->id) != seen.end())
+                continue;
+
+            // create fibonacci tree child node
+            std::shared_ptr<FibonacciTree::Node> ft_node_p_child = std::make_shared<FibonacciTree::Node>();
+            ft_node_p_child->id = t_node_p_child->id;
+            ft_node_p_child->value = t_node_p_child->value;
+            ft_node_p->edges.push(ft_node_p_child); // push onto priority queue of edges
+            bfs_queue.push(ft_node_p_child);
+            seen.insert(ft_node_p_child->id);
+        }
+    }
+}
+
+FibonacciTree::~FibonacciTree() {}
+
+std::shared_ptr<FibonacciTree::Node> FibonacciTree::get_head() const
+{
+    return this->_head;
+}
 
 class LoraxAlgorithm
 {
@@ -59,20 +133,20 @@ public:
 
 public:
     /** Number of roots crossing edge */
-    long search(unsigned int parent_id, unsigned int child_id);
+    long search(unsigned int parent_id, unsigned int child_id) const;
     /** Update node value */
     void update_node(unsigned int node_id, long value);
     /** Add edge to graph */
     void add_edge(unsigned int parent_id, unsigned int child_id);
 };
 
-Tree::Tree() : _nodes(), _bfs() {}
+Tree::Tree() : _nodes() {}
 
-Tree::Tree(unsigned int num_nodes) : _nodes(), _bfs()
+Tree::Tree(unsigned int num_nodes) : _nodes()
 {
     for (unsigned int index = 1; index <= num_nodes; ++index)
     {
-        std::shared_ptr<Node> node = std::make_shared<Node>();
+        std::shared_ptr<Tree::Node> node = std::make_shared<Tree::Node>();
         node->id = index;
         this->_nodes.push_back(node);
     }
@@ -83,82 +157,23 @@ Tree::~Tree() {}
 // Add edge to node graph
 void Tree::add_edge(unsigned int parent_id, unsigned int child_id)
 {
-    std::shared_ptr<Node> parent_p = this->_nodes.at(parent_id - 1);
-    std::shared_ptr<Node> child_p = this->_nodes.at(child_id - 1);
-    std::weak_ptr<Node> parent_wp = parent_p;
-    std::weak_ptr<Node> child_wp = child_p;
+    std::shared_ptr<Tree::Node> parent_p = this->_nodes.at(parent_id - 1);
+    std::shared_ptr<Tree::Node> child_p = this->_nodes.at(child_id - 1);
+    std::weak_ptr<Tree::Node> parent_wp = parent_p;
+    std::weak_ptr<Tree::Node> child_wp = child_p;
     parent_p->edges.push_back(child_wp); // could be a problem here ... circular deconstruction
     child_p->edges.push_back(parent_wp);
 }
 
 // Get the value / weight of a particular node
-std::shared_ptr<Node> Tree::get(unsigned int node_id)
+std::shared_ptr<Tree::Node> Tree::get(unsigned int node_id) const
 {
     return this->_nodes.at(node_id - 1);
-}
-
-std::vector<std::shared_ptr<Node>>::iterator Tree::begin()
-{
-    this->_set_fibonacci_heap();
-    return this->_bfs.begin();
-}
-
-std::vector<std::shared_ptr<Node>>::iterator Tree::end()
-{
-    return this->_bfs.end();
 }
 
 unsigned int Tree::size() const
 {
     return this->_nodes.size();
-}
-
-/**
- Note:
- - Graph assumed to consist entirely of connected components (expand by implementing priority queue of trees)
-*/
-void Tree::_set_fibonacci_heap()
-{
-    unsigned int num_nodes = this->_nodes.size();
-    auto less_than_cmp_nodes = [=](std::shared_ptr<Node> left, std::shared_ptr<Node> right) { return left->value < right->value; };
-    std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, decltype(less_than_cmp_nodes)> p_queue(less_than_cmp_nodes);
-
-    for (auto it = this->_nodes.begin(); it != this->_nodes.end(); ++it)
-    {
-        std::cout << (*it)->id << " {" << (*it)->value << "} | ";
-        p_queue.push(*it);
-    }
-    std::cout << std::endl;
-
-    this->_bfs.clear();
-
-    std::set<unsigned int> seen = std::set<unsigned int>();
-
-    while (seen.size() < num_nodes && !p_queue.empty())
-    {
-        std::shared_ptr<Node> node = p_queue.top();
-        p_queue.pop();
-        std::cout << node->id << " {" << node->value << "} | ";
-        if (seen.find(node->id) != seen.end())
-        {
-            continue;
-        }
-        this->_bfs.push_back(node);
-        seen.insert(node->id);
-        auto edge_it_begin = node->edges.begin();
-        auto edge_it_end = node->edges.end();
-        for (auto edge_it = edge_it_begin; edge_it != edge_it_end; ++edge_it)
-        {
-            std::shared_ptr<Node> child = (*edge_it).lock();
-            if (seen.find(child->id) == seen.end())
-            {
-                std::cout << child->id << " {" << child->value << "} | ";
-                this->_bfs.push_back(child);
-                seen.insert(child->id);
-            }
-        }
-    }
-    std::cout << std::endl;
 }
 
 LoraxAlgorithm::LoraxAlgorithm() : _tree() {}
@@ -174,38 +189,49 @@ void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child)
 
 void LoraxAlgorithm::update_node(unsigned int node_id, long sum)
 {
-    std::shared_ptr<Node> node = this->_tree.get(node_id);
+    std::shared_ptr<Tree::Node> node = this->_tree.get(node_id);
     node->value += sum;
 }
 
-long LoraxAlgorithm::search(unsigned int parent, unsigned int child)
+long LoraxAlgorithm::search(unsigned int parent_id, unsigned int child_id) const
 {
-    auto begin_it = this->_tree.begin();
-    auto end_it = this->_tree.end();
+    FibonacciTree fib_tree = FibonacciTree(this->_tree);
+    std::shared_ptr<FibonacciTree::Node> head_p = fib_tree.get_head();
+
+    std::queue<std::shared_ptr<FibonacciTree::Node>> bfs_queue;
+    bfs_queue.push(head_p);
+
     long sum = 0;
-    bool parent_seen = 0;
-    // long parent_value = 0;
-    for (auto it = begin_it; it != end_it; ++it)
+    bool seen_parent = false; // sum once the first child or parent node is reached;
+
+    while (!bfs_queue.empty())
     {
-        std::shared_ptr<Node> node_p = *it;
+        std::shared_ptr<FibonacciTree::Node> node_p = bfs_queue.front();
+        bfs_queue.pop();
         std::cout << node_p->id << " {" << node_p->value << "} | ";
-        sum += node_p->value;
-        if (node_p->id == parent || node_p->id == child)
+        if (!seen_parent && (node_p->id == parent_id || node_p->id == child_id))
         {
-            if (!parent_seen)
-            {
-                // parent_value = node_p->value;
-                parent_seen = true;
-            }
+            seen_parent = true;
+        }
+        else if (node_p->id == parent_id || node_p->id == child_id)
+        {
+            std::cout << std::endl;
+            if (node_p->edges.empty())
+                return std::abs(node_p->value);
             else
-            {
-                sum -= node_p->value;
-                break;
-            }
+                return std::abs(sum);
+        }
+        sum += node_p->value;
+
+        while (!node_p->edges.empty())
+        {
+            std::shared_ptr<FibonacciTree::Node> child_p = node_p->edges.top();
+            node_p->edges.pop();
+            bfs_queue.push(child_p);
         }
     }
-    std::cout << std::endl;
-    return sum;
+
+    throw std::logic_error("edge between nodes does not exist");
 }
 
 #ifndef _TESTS_H
