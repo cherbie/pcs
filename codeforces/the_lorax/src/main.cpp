@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-// #include "tests.hpp"
-
-int main(int argc, char *argv[]);
 
 class Tree
 {
@@ -27,13 +24,17 @@ public:
         unsigned int id;
         long value = 0;
         std::list<std::weak_ptr<Node>> edges; // adjacency list
+        friend bool operator<(const Tree::Node &l, const Tree::Node &r)
+        {
+            return l.value < r.value; // keep the same order
+        }
     };
 
     void add_edge(unsigned int parent, unsigned int child);
-    std::shared_ptr<Node> get(unsigned int node_id) const;
+    std::shared_ptr<Tree::Node> get(unsigned int node_id) const;
     unsigned int size() const;
 
-    static bool compare(std::shared_ptr<Node> largest, std::shared_ptr<Node> next)
+    static bool compare(std::shared_ptr<Tree::Node> largest, std::shared_ptr<Tree::Node> next)
     {
         return largest->value < next->value;
     }
@@ -50,6 +51,10 @@ public:
         unsigned int id;
         long value;
         std::priority_queue<std::shared_ptr<FibonacciTree::Node>, std::vector<std::shared_ptr<FibonacciTree::Node>>> edges;
+        friend bool operator<(const FibonacciTree::Node &l, const FibonacciTree::Node &r)
+        {
+            return l.value < r.value;
+        }
     };
 
 public:
@@ -67,6 +72,27 @@ private:
     std::shared_ptr<FibonacciTree::Node> _head;
     unsigned int _num_nodes;
 };
+
+class LoraxAlgorithm
+{
+private:
+    Tree _tree;
+
+public:
+    LoraxAlgorithm();
+    LoraxAlgorithm(unsigned int num_nodes);
+    ~LoraxAlgorithm();
+
+public:
+    /** Number of roots crossing edge */
+    long search(unsigned int parent_id, unsigned int child_id) const;
+    /** Update node value */
+    void update_node(unsigned int node_id, long value);
+    /** Add edge to graph */
+    void add_edge(unsigned int parent_id, unsigned int child_id);
+};
+
+// >> FibonacciTree >>
 
 FibonacciTree::FibonacciTree() : _head(nullptr), _num_nodes(0)
 {
@@ -121,34 +147,19 @@ std::shared_ptr<FibonacciTree::Node> FibonacciTree::get_head() const
     return this->_head;
 }
 
-class LoraxAlgorithm
-{
-private:
-    Tree _tree;
+// << FibonacciTree <<
 
-public:
-    LoraxAlgorithm();
-    LoraxAlgorithm(unsigned int num_nodes);
-    ~LoraxAlgorithm();
-
-public:
-    /** Number of roots crossing edge */
-    long search(unsigned int parent_id, unsigned int child_id) const;
-    /** Update node value */
-    void update_node(unsigned int node_id, long value);
-    /** Add edge to graph */
-    void add_edge(unsigned int parent_id, unsigned int child_id);
-};
+// >> Tree >>
 
 Tree::Tree() : _nodes() {}
 
-Tree::Tree(unsigned int num_nodes) : _nodes()
+Tree::Tree(unsigned int num_nodes) : _nodes(num_nodes)
 {
     for (unsigned int index = 1; index <= num_nodes; ++index)
     {
         std::shared_ptr<Tree::Node> node = std::make_shared<Tree::Node>();
         node->id = index;
-        this->_nodes.push_back(node);
+        this->_nodes.at(index - 1) = node;
     }
 }
 
@@ -175,6 +186,10 @@ unsigned int Tree::size() const
 {
     return this->_nodes.size();
 }
+
+// << Tree <<
+
+// >> LoraxAlgorithm >>
 
 LoraxAlgorithm::LoraxAlgorithm() : _tree() {}
 
@@ -234,6 +249,8 @@ long LoraxAlgorithm::search(unsigned int parent_id, unsigned int child_id) const
     throw std::logic_error("edge between nodes does not exist");
 }
 
+// << LoraxAlgorithm <<
+
 #ifndef _TESTS_H
 
 int main(int argc, char *argv[])
@@ -271,13 +288,6 @@ int main(int argc, char *argv[])
             }
         }
     }
-    std::exit(EXIT_SUCCESS);
-}
-
-#else
-
-int main(int argc, char *argv[])
-{
     std::exit(EXIT_SUCCESS);
 }
 
