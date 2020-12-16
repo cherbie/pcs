@@ -14,14 +14,14 @@ class Tree
 {
 public:
     Tree();
-    Tree(unsigned int num_nodes);
+    Tree(int num_nodes);
     ~Tree();
 
     friend class FibonacciTree;
 
     struct Node
     {
-        unsigned int id;
+        int id;
         long value = 0;
         std::list<std::weak_ptr<Node>> edges; // adjacency list
         friend bool operator<(const Tree::Node &l, const Tree::Node &r)
@@ -30,9 +30,9 @@ public:
         }
     };
 
-    void add_edge(unsigned int parent, unsigned int child);
-    std::shared_ptr<Tree::Node> get(unsigned int node_id) const;
-    unsigned int size() const;
+    void add_edge(int parent, int child);
+    std::shared_ptr<Tree::Node> get(int node_id) const;
+    int size() const;
 
     static bool compare(std::shared_ptr<Tree::Node> largest, std::shared_ptr<Tree::Node> next)
     {
@@ -48,7 +48,7 @@ class FibonacciTree
 public:
     struct Node
     {
-        unsigned int id;
+        int id;
         long value;
         std::priority_queue<std::shared_ptr<FibonacciTree::Node>, std::vector<std::shared_ptr<FibonacciTree::Node>>> edges;
         friend bool operator<(const FibonacciTree::Node &l, const FibonacciTree::Node &r)
@@ -70,7 +70,7 @@ public:
 
 private:
     std::shared_ptr<FibonacciTree::Node> _head;
-    unsigned int _num_nodes;
+    int _num_nodes;
 };
 
 class LoraxAlgorithm
@@ -80,16 +80,16 @@ private:
 
 public:
     LoraxAlgorithm();
-    LoraxAlgorithm(unsigned int num_nodes);
+    LoraxAlgorithm(int num_nodes);
     ~LoraxAlgorithm();
 
 public:
     /** Number of roots crossing edge */
-    long search(unsigned int parent_id, unsigned int child_id) const;
+    long search(int parent_id, int child_id) const;
     /** Update node value */
-    void update_node(unsigned int node_id, long value);
+    void update_node(int node_id, long value);
     /** Add edge to graph */
-    void add_edge(unsigned int parent_id, unsigned int child_id);
+    void add_edge(int parent_id, int child_id);
 };
 
 // >> FibonacciTree >>
@@ -105,7 +105,7 @@ FibonacciTree::FibonacciTree(Tree tree) : _head(nullptr), _num_nodes(tree._nodes
     if (max_node_p == tree._nodes.end())
         return;
 
-    std::set<unsigned int> seen;
+    std::set<int> seen;
     std::queue<std::shared_ptr<FibonacciTree::Node>> bfs_queue;
 
     this->_head = std::make_shared<FibonacciTree::Node>();
@@ -114,7 +114,7 @@ FibonacciTree::FibonacciTree(Tree tree) : _head(nullptr), _num_nodes(tree._nodes
     bfs_queue.push(this->_head);
     seen.insert(this->_head->id);
 
-    while (seen.size() < this->_num_nodes && !bfs_queue.empty())
+    while (seen.size() < (std::set<int>::size_type) this->_num_nodes && !bfs_queue.empty())
     {
         std::shared_ptr<FibonacciTree::Node> ft_node_p = bfs_queue.front();
         bfs_queue.pop();
@@ -153,9 +153,9 @@ std::shared_ptr<FibonacciTree::Node> FibonacciTree::get_head() const
 
 Tree::Tree() : _nodes() {}
 
-Tree::Tree(unsigned int num_nodes) : _nodes(num_nodes)
+Tree::Tree(int num_nodes) : _nodes(num_nodes)
 {
-    for (unsigned int index = 1; index <= num_nodes; ++index)
+    for (int index = 1; index <= num_nodes; ++index)
     {
         std::shared_ptr<Tree::Node> node = std::make_shared<Tree::Node>();
         node->id = index;
@@ -166,7 +166,7 @@ Tree::Tree(unsigned int num_nodes) : _nodes(num_nodes)
 Tree::~Tree() {}
 
 // Add edge to node graph
-void Tree::add_edge(unsigned int parent_id, unsigned int child_id)
+void Tree::add_edge(int parent_id, int child_id)
 {
     std::shared_ptr<Tree::Node> parent_p = this->_nodes.at(parent_id - 1);
     std::shared_ptr<Tree::Node> child_p = this->_nodes.at(child_id - 1);
@@ -177,12 +177,12 @@ void Tree::add_edge(unsigned int parent_id, unsigned int child_id)
 }
 
 // Get the value / weight of a particular node
-std::shared_ptr<Tree::Node> Tree::get(unsigned int node_id) const
+std::shared_ptr<Tree::Node> Tree::get(int node_id) const
 {
     return this->_nodes.at(node_id - 1);
 }
 
-unsigned int Tree::size() const
+int Tree::size() const
 {
     return this->_nodes.size();
 }
@@ -193,22 +193,22 @@ unsigned int Tree::size() const
 
 LoraxAlgorithm::LoraxAlgorithm() : _tree() {}
 
-LoraxAlgorithm::LoraxAlgorithm(unsigned int num_nodes) : _tree(num_nodes) {}
+LoraxAlgorithm::LoraxAlgorithm(int num_nodes) : _tree(num_nodes) {}
 
 LoraxAlgorithm::~LoraxAlgorithm() {}
 
-void LoraxAlgorithm::add_edge(unsigned int parent, unsigned int child)
+void LoraxAlgorithm::add_edge(int parent, int child)
 {
     this->_tree.add_edge(parent, child);
 }
 
-void LoraxAlgorithm::update_node(unsigned int node_id, long sum)
+void LoraxAlgorithm::update_node(int node_id, long sum)
 {
     std::shared_ptr<Tree::Node> node = this->_tree.get(node_id);
     node->value += sum;
 }
 
-long LoraxAlgorithm::search(unsigned int parent_id, unsigned int child_id) const
+long LoraxAlgorithm::search(int parent_id, int child_id) const
 {
     FibonacciTree fib_tree = FibonacciTree(this->_tree);
     std::shared_ptr<FibonacciTree::Node> head_p = fib_tree.get_head();
@@ -255,26 +255,26 @@ long LoraxAlgorithm::search(unsigned int parent_id, unsigned int child_id) const
 
 int main(int argc, char *argv[])
 {
-    unsigned int num_tests;
+    int num_tests;
     std::cin >> num_tests;
-    for (unsigned int i = 0; i < num_tests; ++i)
+    for (int i = 0; i < num_tests; ++i)
     {
-        unsigned int num_nodes, num_queries;
+        int num_nodes, num_queries;
         std::cin >> num_nodes >> num_queries;
         LoraxAlgorithm lorax_alg = LoraxAlgorithm(num_nodes);
 
         // -- Graph initialisation
-        for (unsigned int j = 0; j < num_nodes - 1; ++j)
+        for (int j = 0; j < num_nodes - 1; ++j)
         {
-            unsigned int parent, child;
+            int parent, child;
             std::cin >> parent >> child;
-            lorax_alg.add_edge((unsigned int)parent, (unsigned int)child);
+            lorax_alg.add_edge((int)parent, (int)child);
         }
 
         // -- Queries
-        for (unsigned int j = 0; j < num_queries; ++j)
+        for (int j = 0; j < num_queries; ++j)
         {
-            unsigned int parent, child;
+            int parent, child;
             long query_value;
             std::cin >> parent >> child >> query_value;
             if (query_value == 0)

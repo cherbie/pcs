@@ -1,44 +1,49 @@
 #include "tests.hpp"
 
-#define MAX_TEST_SIZE UINT_MAX
+#define MAX_TEST_SIZE 100000
 
-TreeTest::TreeTest() : _tree_min(2), _tree_normal(6), _tree_max(MAX_TEST_SIZE) {}
+TreeTest::TreeTest() : tree_min_(2), tree_normal_(6), tree_max_(MAX_TEST_SIZE) {}
 
 void TreeTest::SetUp()
 {
     // minimum
-    _tree_min.add_edge(1, 2);
+    tree_min_.add_edge(1, 2);
 
     // normal
-    _tree_normal.add_edge(1, 2);
-    _tree_normal.add_edge(2, 3);
-    _tree_normal.add_edge(3, 1);
-    _tree_normal.add_edge(4, 5);
-    _tree_normal.add_edge(4, 6);
+    tree_normal_.add_edge(1, 2);
+    tree_normal_.add_edge(2, 3);
+    tree_normal_.add_edge(3, 1);
+    tree_normal_.add_edge(4, 5);
+    tree_normal_.add_edge(4, 6);
 
     std::srand(std::time(0));
 
-    for (unsigned int i = 1; i < MAX_TEST_SIZE; ++i)
+    for (int i = 1; i < MAX_TEST_SIZE; ++i)
     {
-        unsigned int parent = std::rand() % MAX_TEST_SIZE + 1;
-        unsigned int child = std::rand() % MAX_TEST_SIZE + 1;
-
-        std::cout << parent << " | " << child << std::endl;
-        _tree_max.add_edge(parent, child);
+        int parent = std::rand() % MAX_TEST_SIZE + 1;
+        int child = std::rand() % MAX_TEST_SIZE + 1;
+        tree_max_.add_edge(parent, child);
     }
 }
 
-TEST_F(TreeTest, EmptyTreeInitialisation)
+TEST_F(TreeTest, TreeSizeInitialisation)
 {
-    Tree test_tree;
-    ASSERT_EQ(test_tree.size(), 0);
+    EXPECT_EQ(tree_min_.size(), 2);
+    EXPECT_EQ(tree_normal_.size(), 6);
+    EXPECT_EQ(tree_max_.size(), MAX_TEST_SIZE);
+
 }
 
-TEST_F(TreeTest, TreeNumberNodesInitialisation)
+TEST_F(TreeTest, CircularEdgeNoThrow) {
+    ASSERT_NO_THROW(tree_min_.add_edge(1, 1));
+}
+
+using TreeDeathTest = TreeTest;
+
+TEST_F(TreeDeathTest, OutOfRangeEdgeThrow)
 {
-    unsigned int num_nodes = std::rand() / RAND_MAX * UINT_MAX;
-    Tree test_tree(num_nodes);
-    ASSERT_EQ(test_tree.size(), num_nodes);
+    ASSERT_ANY_THROW(tree_min_.add_edge(2, 3));
+    ASSERT_ANY_THROW(tree_min_.add_edge(0, 1));
 }
 
 int main(int argc, char *argv[])

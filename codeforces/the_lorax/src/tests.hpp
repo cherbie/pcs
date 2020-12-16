@@ -14,8 +14,7 @@ protected:
     TreeTest();
     void SetUp() override;
 
-private:
-    Tree _tree_min;
-    Tree _tree_normal;
-    Tree _tree_max;
+    Tree tree_min_;
+    Tree tree_normal_;
+    Tree tree_max_;
 };

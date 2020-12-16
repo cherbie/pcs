@@ -1,9 +1,9 @@
 CXX = g++
-CPPFLAGS = -std=c++17 -Wall -Werror -pedantic -g3
+CPPFLAGS = -std=c++17 -Wall -Werror -pedantic -g3 -pthread
 SRC_DIRS ?= ./src
 BUILD_DIR ?= ./build
 
-LINK = -L./dep/googletest/build/lib -lgtest
+LINK = -L./dep/googletest/build/lib -lgtest -lpthread
 INC = -I./dep/googletest/googletest/include
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
