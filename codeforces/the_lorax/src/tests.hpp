@@ -2,5 +2,19 @@
 #define _TESTS_H
 #endif
 
-bool test_graph_adjacency_list();
-bool test_node_value_change();
+#include "main.cpp" // class definitions
+#include <cstdlib>
+#include <climits>
+#include <ctime>
+#include "gtest/gtest.h"
+
+class TreeTest : public ::testing::Test
+{
+protected:
+    TreeTest();
+    void SetUp() override;
+
+    Tree tree_min_;
+    Tree tree_normal_;
+    Tree tree_max_;
+};
