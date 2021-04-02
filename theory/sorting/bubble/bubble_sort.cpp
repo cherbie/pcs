@@ -4,7 +4,17 @@
 
 void bubble_sort(std::vector<int>&);
 
+void print_usage()
+{
+	std::cout << "Usage:\n"
+		  << "./bubble\n"
+		  << "n\n"
+		  << "e1 [e2 e3 [...e4]]"
+		  << std::endl;
+}
+
 int main(int argc, char *argv[]) {
+    print_usage();
     int n; // number of elements in array
     std::cin >> n;
     std::vector<int> a(n);
