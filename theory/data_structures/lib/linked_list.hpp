@@ -1,14 +1,14 @@
+#ifndef _LINKED_LIST_H
+#define _LINKED_LIST_H
+
 #include <cstdlib>
 #include <unistd.h>
-
-#ifndef _LINKED_LIST_H_
-#define _LINKED_LIST_H_
 
 template <typename T>
 struct Node {
     T element;
     Node *next;
-};
+}; // struct Node
 
 template<class T>
 class LinkedList {
@@ -16,10 +16,13 @@ class LinkedList {
         Node<T> *first;
         size_t length;
     public:    
-        LinkedList(void);
+        LinkedList();
+	~LinkedList();
+
         void queue(T);
-        T *dequeue(void);
-        T *peek(void);
-        bool isEmpty(void);
-};
-#endif
+        T* dequeue();
+        T* peek();
+        bool isEmpty();
+}; // class LinkedList
+
+#endif // _LINKED_LIST_H

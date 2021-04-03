@@ -1,4 +1,13 @@
-#include "data_structures.hpp"
+#include <iostream>
+#include <cstdlib>
+#include <csignal>
+#include <unistd.h>
+#include <vector>
+
+#include "lib/linked_list.hpp"
+
+void signal_callback_handler(int);
+int test_linked_list(LinkedList<int>&);
 
 void signal_callback_handler(int signum) {
     std::cout << "Cleanly exiting program: " << signum << std::endl;
@@ -34,7 +43,7 @@ int test_linked_list(LinkedList<int>& list) {
     return EXIT_SUCCESS;
 }
 
-int main(int argc, char *argv[]) {
+int main() {
     signal(SIGINT, signal_callback_handler); // register signal and signal handler
     std::cout << "<Ctrl-C> to exit program" << std::endl;
     LinkedList<int> list;
