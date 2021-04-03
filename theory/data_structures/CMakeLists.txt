@@ -4,6 +4,7 @@ project(test)
 
 add_subdirectory(lib)
 
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-pedantic -Wall -Wextra")
 
 add_executable(test main.cpp)
