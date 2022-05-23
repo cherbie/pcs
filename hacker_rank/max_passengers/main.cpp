@@ -4,27 +4,81 @@
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
+#include <map>
+
+#define INT_MIN -100
 
 namespace program
 {
-    using bitset = std::bitset<1000000>;
-    using mst_path = std::tuple<bitset, std::size_t, std::size_t>;
+    std::vector<int> mat;
+    int r = 0, c = 0;
+    std::map<std::pair<int, std::pair<int, int>>, int> dp; // memoization
 
-    namespace
+    bool isValid(int i, int j)
     {
-        static bool cmp_mst_path(mst_path l, mst_path r)
+        if (i < 0 || i >= r)
+            return false;
+        else if (j < 0 || j >= c)
+            return false;
+        else if (mat[i * r + j] < 0)
+            return false;
+        // else
+        return true;
+    }
+
+    int solution(int i, int j, int x, int y)
+    {
+        if (!isValid(i, j))
+            return INT_MIN;
+        else if (!isValid(x, y))
+            return INT_MIN;
+
+        // recursion base condition
+        if (i == r - 1 && x == r - 1 && j == c - 1 && y == c - 1)
         {
-            return (std::get<2>(l) >= std::get<2>(r));
+            if (mat[i * r + j] == 1)
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
         }
+
+        if (dp.find({i, {j, x}}) != dp.end())
+            return dp[{i, {j, x}}]; // get memoized value
+
+        int sum = 0;
+        if (i == x && j == y)
+        {
+            if (mat[i * r + j] == 1)
+                sum = 1;
+        }
+        else
+        {
+            if (mat[i * r + j] == 1)
+                sum++;
+            if (mat[x * r + y] == 1)
+                sum++;
+        }
+
+        // memoize possible down outcomes
+        auto op1 = solution(i + 1, j, x + 1, y); // down
+        auto op3 = solution(i + 1, j, x, y + 1); // out of sync
+
+        // memoize possible right outcomess
+        auto op2 = solution(i, j + 1, x, y + 1); // right
+        auto op4 = solution(i, j + 1, x + 1, y); // out of sync
+        int max = sum + std::max(op1, std::max(op2, std::max(op3, op4)));
+        dp[{i, {j, x}}] = max;
+        return max;
     }
 
     int program(int argc, char *argv[])
     {
-        long n, m; // sizes not specified (generous assumption made)
-        std::cin >> n >> m;
-        long num_el = n * m;
-        bitset graph;
-        bitset people;
+        std::cin >> r >> c;
+
         // 1 0 0 0
         // -1 1 0 1
         // 0 1 0 -1
@@ -33,138 +87,20 @@ namespace program
         // 1000 0101
         //
         // O(m*n)
-        for (long i = 0; i < n; i++)
+        for (int i = 0; i < r; i++)
         {
-            for (long j = 0; j < m; j++)
+            for (int j = 0; j < c; j++)
             {
-                int t; // type
+                int t;
                 std::cin >> t;
-                std::size_t index = i * n + j;
-                std::cerr << t << " | " << index << " | " << graph.size() << "\n";
-                if (t >= 0)
-                {
-                    if (t == 1)
-                    {
-                        people.set(index);
-                    }
-                    graph.set(index);
-                }
+                mat.push_back(t);
             }
         }
 
-        // find paths to (n-1, n-1)
-        std::size_t current_idx = 0;
-        std::deque<mst_path> q = std::deque<mst_path>();
-        {
-            bitset comp_map;
-            unsigned int count = 0;
-            comp_map.set(current_idx);
-            if (people.test(0))
-            {
-                count = 1;
-            }
-            q.push_back(std::make_tuple(comp_map, current_idx, count));
-        }
-        std::size_t operations = 0;
-        for (int i = 0; i < m + n; i++)
-        {
-            if (q.empty())
-                return 0; // no MST
-            // else
-            mst_path path_tuple = q.front();
-            q.pop_front();
-            const auto current_idx = std::get<1>(path_tuple);
-            auto path = std::get<0>(path_tuple);
-
-            // right
-            std::size_t right_idx = current_idx + 1;
-            if (right_idx < num_el && graph.test(right_idx))
-            {
-                auto count = std::get<2>(path_tuple);
-                if (people.test(right_idx))
-                {
-                    count++;
-                }
-                path.set(right_idx);
-                q.push_back(std::make_tuple(path, right_idx, count));
-            }
-
-            // down
-            std::size_t down_idx = current_idx + m;
-            if (down_idx < num_el && graph.test(down_idx))
-            {
-                auto count = std::get<2>(path_tuple);
-                if (people.test(down_idx))
-                {
-                    count++;
-                }
-                path.set(down_idx);
-                q.push_back(std::make_tuple(path, down_idx, count));
-            }
-        }
-        if (q.empty())
-            return 0; // no MST
-        // else
-        auto it = std::max_element(q.cbegin(), q.cend(), cmp_mst_path);
-        if (it == q.end())
-        {
-            throw std::invalid_argument("error"); // error
-        }
-
-        // else
-        auto max_path = std::get<0>(*it);
-        auto eliminated = bitset(people & max_path); // remove people seen
-        people &= ~eliminated;
-        q.clear();
-        q.push_back(*it);
-
-        // -- AND BACK --
-        for (int i = 0; i < m + n; i++)
-        {
-            if (q.empty())
-                return 0; // no MST
-            // else
-            mst_path path_tuple = q.front();
-            q.pop_front();
-            const auto current_idx = std::get<1>(path_tuple);
-            auto path = std::get<0>(path_tuple);
-
-            // left
-            std::size_t left_idx = current_idx - 1;
-            if (left_idx >= 0 && graph.test(left_idx))
-            {
-                auto count = std::get<2>(path_tuple);
-                if (people.test(left_idx))
-                {
-                    count++;
-                }
-                path.set(left_idx);
-                q.push_back(std::make_tuple(path, left_idx, count));
-            }
-
-            // up
-            std::size_t up_idx = current_idx - m;
-            if (up_idx >= 0 && graph.test(up_idx))
-            {
-                auto count = std::get<2>(path_tuple);
-                if (people.test(up_idx))
-                {
-                    count++;
-                }
-                path.set(up_idx);
-                q.push_back(std::make_tuple(path, up_idx, count));
-            }
-        }
-
-        if (q.empty())
-            throw std::invalid_argument("error"); // error
-        // else
-        it = std::max_element(q.cbegin(), q.cend(), cmp_mst_path);
-        if (it == q.end())
-        {
-            throw std::invalid_argument("error");
-        }
-        return std::get<2>(*it);
+        if (solution(0, 0, 0, 0) > 0)
+            return solution(0, 0, 0, 0); // non-directed graph
+        else
+            return 0;
     }
 }
 
