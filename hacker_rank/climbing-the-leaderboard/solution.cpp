@@ -1,6 +1,4 @@
 #include <bits/stdc++.h>
-#include <queue>
-#include <numeric>
 
 // Complexity: O(nlog(n))
 // @param ranked - the leaderboard scores (sorted max -> min)
@@ -8,21 +6,19 @@
 // @return - the player's rank after each score
 std::vector<int> climbingTheLeaderboard(std::vector<int> ranked, std::vector<int> player)
 {
+    using LeaderboardSet = std::set<int, std::greater<int>>;
+    LeaderboardSet base = LeaderboardSet(ranked.begin(), ranked.end());
+
     for (int &v : player) 
     {
-        std::pair<int /*rank*/, int /*score*/> lastRank = std::make_pair<int, int>(0, INT_MAX);
-        ranked.push_back(v);
-        for (auto score : ranked)
+        LeaderboardSet round = base;
+        auto result = round.insert(v);
+        if (result.first == round.end())
         {
-            if (lastRank.second > score)
-            {
-                lastRank.first += 1;
-                lastRank.second = score;
-            }
-            if (score <= v) break;
+            std::cerr << "something went wrong" << std::endl;
+            std::exit(1);
         }
-        ranked.pop_back();
-        v = lastRank.first;
+        v = std::distance(round.begin(), result.first) + 1;
     }
  
     return player;
