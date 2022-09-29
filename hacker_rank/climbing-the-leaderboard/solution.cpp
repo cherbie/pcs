@@ -1,26 +1,30 @@
 #include <bits/stdc++.h>
 
-// Complexity: O(nlog(n))
-// @param ranked - the leaderboard scores (sorted max -> min)
-// @param player - the player's scores
+// Complexity: O(M + N), where M = ranked.size() & N = player.size();
+// @param ranked - the leaderboard scores (sorted max -> min) (descending order)
+// @param player - the player's scores (ascending order)
 // @return - the player's rank after each score
 std::vector<int> climbingTheLeaderboard(std::vector<int> ranked, std::vector<int> player)
 {
-    using LeaderboardSet = std::set<int, std::greater<int>>;
-    LeaderboardSet base = LeaderboardSet(ranked.begin(), ranked.end());
-
-    for (int &v : player) 
+    auto ranked_it = ranked.begin();
+    auto player_it = player.rbegin(); // iterate in reverse
+    int rank = 1;
+    while (player_it != player.rend())
     {
-        LeaderboardSet round = base;
-        auto result = round.insert(v);
-        if (result.first == round.end())
+        int score = *player_it; // default score = current evaluated player
+        while (ranked_it != ranked.end() && *ranked_it > *player_it)
         {
-            std::cerr << "something went wrong" << std::endl;
-            std::exit(1);
+            if (score > *ranked_it) rank++;  // previous ranked_it greater
+
+            score = *ranked_it;  // update greatest score
+            ranked_it++;
         }
-        v = std::distance(round.begin(), result.first) + 1;
+        if (score > *player_it) rank++; // one more rank difference from ranked list
+
+        *player_it = rank;
+        player_it++;
     }
- 
+
     return player;
 }
 
