@@ -2,24 +2,19 @@
 
 int lengthOfLongestSubstring(const std::string &s)
 {
-    int max = 0;
-    auto start_it = s.begin();
-    // O(n)
-    while (start_it != s.end())
-    {
-        auto max_it = start_it;
-        max_it++;
-        std::set<char> seen = {*start_it};
-        // O(nlog(n))
-        while (max_it != s.end() && seen.find(*max_it) == seen.end())
-        {
-            seen.insert(*max_it);
-            max_it++;
+    int store[sizeof(char)] = {0};
+    int left = 0, right = 0;
+    int result = 0;
+    while(right < (int)s.length()){
+        store[(int)s[right]]++;
+        while(store[(int)s[right]] > 1){
+            store[(int)s[left]]--;
+            left++;
         }
-        max = std::max(max, (int)std::distance(start_it, max_it));
-        start_it++;
+        right++;
+        result = std::max(result, right - left);
     }
-    return max;
+    return result;
 }
 
 int main(int argc, char** argv)
