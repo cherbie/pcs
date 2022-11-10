@@ -1,5 +1,5 @@
 COMPILER=g++-12
-CPPFLAGS=-Wacll -Werror -pedantic -std=c++17
+CPPFLAGS=-Wall -Werror -pedantic -std=c++17
 
 
 exe: solution.cpp
