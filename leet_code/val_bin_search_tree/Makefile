@@ -1,0 +1,10 @@
+COMPILER = g++-12
+CPPFLAGS = --std=c++20 -Wall -Werror -pedantic
+
+exe : solution.cpp 
+	$(COMPILER) $(CPPFLAGS) -DDEBUG -o exe solution.cpp
+
+.PHONY : clean
+
+clean :
+	rm -rdf exe
