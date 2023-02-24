@@ -10,21 +10,19 @@ static auto _ = []()
 }();
 #endif // ifndef DEBUG
 
-#define NUM_BITS 20
+#define NUM_BITS 14
 
 int minOperations(unsigned int n) {
     int count = 0;
     for (int i = 0; i < NUM_BITS; i++)
     {
-        std::bitset<NUM_BITS> updated_bits = std::bitset<NUM_BITS>(n + (1 << i));
-        std::bitset<NUM_BITS> bits(n);
-        if (updated_bits.count() < bits.count())
+        if (__builtin_popcount(n + (1 << i)) < __builtin_popcount(n))
         {
             n += (1 << i);
             count++;
         }
     }
-    return count + (std::bitset<NUM_BITS>(n)).count();
+    return count + __builtin_popcount(n);
 }
 
 int main(int argc, char **argv)
