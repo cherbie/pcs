@@ -10,36 +10,21 @@ static auto _ = []()
     return nullptr;
 }();
 
-constexpr ll n_choose_k(ll n, ll k)
-{
-    if (k > n)
-        return 0;
-    if (k * 2 > n)
-        k = n - k;
-    if (k == 0)
-        return 1;
-
-    ll result = n;
-    for (ll i = 2; i <= k; ++i)
-    {
-        result *= (n - i + 1);
-        result /= i;
-    }
-    return result;
+/// @brief count the number of pairs whose sum is less than the _bound_ parameter
+ll countLess(const std::vector<int>& nums, int bound) {
+    ll res = 0;
+    for (int i = 0, j = nums.size() - 1; i < j; ++i) {
+        while(i < j && nums[i] + nums[j] > bound)
+            --j;
+        res += j - i;
+    }        
+    return res;
 }
 
-constexpr ll countFairPairs(std::vector<int> &nums, int lower, int upper)
+ll countFairPairs(std::vector<int> &nums, int lower, int upper)
 {
     std::sort(nums.begin(), nums.end());
-    auto low_it = std::find(nums.begin(), nums.end(), [lower, upper](int v)
-                            { return v >= lower && v <= upper; });
-    if (low_it == nums.end())
-        return 0;
-    auto upper_it = std::find(nums.begin(), nums.end(), [lower, upper](int v)
-                              { return v >= lower && v <= upper; });
-    auto number_el = std::distance(low_it, upper_it);
-    std::cerr << number_el << std::endl;
-    return n_choose_k(number_el, 2);
+    return countLess(nums, upper) - countLess(nums, lower - 1);
 }
 
 int main(int argc, char **argv)
