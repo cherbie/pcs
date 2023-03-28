@@ -1,8 +1,8 @@
 #include <bits/stdc++.h>
 
-int largestPrime(int a, int b)
+int smallestPrime(int a, int b)
 {
-    for (int i = b - 1; i >= a; i--)
+    for (int i = a; i < b; i++)
     {
         if (i < 2)
             continue;
@@ -18,7 +18,7 @@ int largestPrime(int a, int b)
             }
         }
 
-        if (isPrime)
+        if (isPrime && (i == 2 || i % 2 != 0))
             return i;
     }
 
@@ -31,26 +31,41 @@ bool primeSubOperation(std::vector<int> nums)
     // and pick a prime p strictly less than nums[i]
     // then subtract p from nums[i].
 
-    if (largestPrime(0, nums[0]) > 0)
-        nums[0] = nums[0] - largestPrime(0, nums[0]);
+    // sieve algorithm
 
-    for (std::size_t i = 0; i < nums.size() - 1; i++)
+    auto it = nums.rbegin();
+
+    while (it != nums.rend())
     {
-        int maxPrime = largestPrime(nums[i], nums[i+1] - nums[i]);
-        std::cerr << "(" << nums[i] << ", " << nums[i+1] << ", " << maxPrime << ") ";
-        if (maxPrime < 0)
+        auto currentValue = *it;
+        it++;
+        if (it == nums.rend())
+            return true;
+
+        auto nextValue = *it;
+        if (currentValue > nextValue)
+            continue;
+
+        auto primeNumber = smallestPrime(nextValue - currentValue + 1, nextValue);
+        if (primeNumber < 0)
             return false;
-        else nums[i+1] = nums[i+1] - maxPrime;
+        else
+        {
+            *it = nextValue - primeNumber;
+        }
     }
     return true;
 }
 
 int main(int argc, char **argv)
 {
-    std::cout << (primeSubOperation(std::vector<int> {4, 9, 6, 10}) ? "true" : "false") << std::endl;
-    std::cout << (primeSubOperation(std::vector<int> {6, 8, 11, 12}) ? "true" : "false") << std::endl;
-    std::cout << (primeSubOperation(std::vector<int> {5, 8, 3}) ? "true" : "false") << std::endl;
+#ifdef DEBUG
+    std::cout << (primeSubOperation(std::vector<int>{4, 9, 6, 10}) ? "true" : "false") << std::endl;
+    std::cout << (primeSubOperation(std::vector<int>{1, 20, 7, 12, 4}) ? "true" : "false") << std::endl;
+    std::cout << (primeSubOperation(std::vector<int>{3, 4, 10, 15, 6}) ? "true" : "false") << std::endl;
+    std::cout << (primeSubOperation(std::vector<int>{5, 8, 3}) ? "true" : "false") << std::endl;
 
     // failing
-    std::cout << (primeSubOperation(std::vector<int> {998, 2}) ? "true" : "false") << std::endl;
+    std::cout << (primeSubOperation(std::vector<int>{998, 2}) ? "true" : "false") << std::endl;
+#endif // ifdef DEBUG
 }
