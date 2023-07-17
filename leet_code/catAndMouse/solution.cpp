@@ -44,12 +44,14 @@ namespace
             }
 
             const auto stateOutcome = dp.find({stepCount % 2, mouseIdx, catIdx});
+#ifdef DEBUG
             if (stateOutcome == dp.end())
             {
                 perror("outcome not valid");
                 exit(1);
             }
-            else if (stateOutcome->second != UNDEFINED)
+#endif // #ifdef DEBUG
+            if (stateOutcome->second != UNDEFINED)
             {
                 return stateOutcome->second;
             }
@@ -66,33 +68,47 @@ namespace
             }
 
             const auto isMouseMove = stepCount % 2 == 0;
-            const int nextStep = stepCount + 1;
-            int nextOutcome = CAT_WIN;
-            for (const auto move : (isMouseMove ? graph[mouseIdx] : graph[catIdx]))
+            int catWinCount = 0, drawCount = 0;
+            for (auto const &move : (isMouseMove ? graph[mouseIdx] : graph[catIdx]))
             {
                 const int mouseMove = isMouseMove ? move : mouseIdx;
                 const int catMove = isMouseMove ? catIdx : move;
-                const int result = dfsTraversal(graph, {nextStep, mouseMove, catMove});
-                if (result == MOUSE_WIN)
+                if (catMove == HOLE_IDX)
                 {
-                    stateOutcome->second = MOUSE_WIN;
-                    return MOUSE_WIN;
+                    continue;
                 }
-                else if (result == DRAW)
-                {
-                    stateOutcome->second = DRAW;
-                    nextOutcome = DRAW;
-                }
+                const int result = dfsTraversal(graph, {stepCount + 1, mouseMove, catMove});
 #ifdef DEBUG
-                else if (result == UNDEFINED)
+                if (result == UNDEFINED)
                 {
                     perror("dfsTraversal resulted in undefined sub-game state result");
                     exit(1);
                 }
 #endif // #ifdef DEBUG
+                if (result == MOUSE_WIN && isMouseMove)
+                {
+                    stateOutcome->second = MOUSE_WIN;
+                    return MOUSE_WIN;
+                }
+                else if (result == CAT_WIN)
+                {
+                    catWinCount++;
+                }
+                else
+                {
+                    drawCount++;
+                }
             }
-            stateOutcome->second = nextOutcome;
-            return nextOutcome;
+            if (!isMouseMove && catWinCount > 0)
+            {
+                stateOutcome->second = CAT_WIN;
+                return CAT_WIN;
+            }
+            else
+            {
+                stateOutcome->second = DRAW;
+                return DRAW;
+            }
         }
     };
 
