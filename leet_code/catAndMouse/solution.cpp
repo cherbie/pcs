@@ -16,11 +16,45 @@ namespace
         {
             const int numNodes = graph.size();
             initGameState(numNodes);
-
-            return dfsTraversal(graph, {0, MOUSE_IDX, CAT_IDX});
+            int lastResult = 0;
+            for (int lastRound = 0; lastRound < numNodes; lastRound++)
+            {
+                lastResult = dfsTraversal(graph, {0, MOUSE_IDX, CAT_IDX});
+                if (lastResult != 0)
+                {
+                    return lastResult;
+                }
+                revisitCatAndMouse(numNodes);
+            }
+            return lastResult;
         }
 
     private:
+        void revisitCatAndMouse(int numNodes)
+        {
+            for (int i = 0; i < numNodes; i++)
+            {
+                for (int j = 0; j < numNodes; j++)
+                {
+                    for (int k = 0; k < 2; k++)
+                    {
+                        const auto outcome = dp.find({k, i, j});
+#ifdef DEBUG
+                        if (outcome == dp.end())
+                        {
+                            perror("could not find expected game state");
+                            exit(1);
+                        }
+#endif // #ifdef DEBUG
+                        if (outcome->second == 0)
+                        {
+                            outcome->second = UNDEFINED;
+                        }
+                    }
+                }
+            }
+        }
+
         void initGameState(int numNodes)
         {
             // initialize dp
@@ -38,10 +72,6 @@ namespace
         int dfsTraversal(const std::vector<std::vector<int>> &graph, std::tuple<int, int, int> gameState)
         {
             const auto &[stepCount, mouseIdx, catIdx] = gameState;
-            if (stepCount >= static_cast<int>(graph.size() * 2))
-            {
-                return DRAW;
-            }
 
             const auto stateOutcome = dp.find({stepCount % 2, mouseIdx, catIdx});
 #ifdef DEBUG
@@ -66,9 +96,13 @@ namespace
                 stateOutcome->second = MOUSE_WIN;
                 return MOUSE_WIN;
             }
+            else
+            {
+                stateOutcome->second = DRAW;
+            }
 
             const auto isMouseMove = stepCount % 2 == 0;
-            int catWinCount = 0, drawCount = 0;
+            int drawCount = 0;
             for (auto const &move : (isMouseMove ? graph[mouseIdx] : graph[catIdx]))
             {
                 const int mouseMove = isMouseMove ? move : mouseIdx;
@@ -85,29 +119,31 @@ namespace
                     exit(1);
                 }
 #endif // #ifdef DEBUG
-                if (result == MOUSE_WIN && isMouseMove)
+                if (isMouseMove && result == MOUSE_WIN)
                 {
                     stateOutcome->second = MOUSE_WIN;
                     return MOUSE_WIN;
                 }
-                else if (result == CAT_WIN)
+                else if (!isMouseMove && result == CAT_WIN)
                 {
-                    catWinCount++;
+                    stateOutcome->second = CAT_WIN;
+                    return CAT_WIN;
                 }
-                else
+                else if (result == DRAW)
                 {
                     drawCount++;
                 }
             }
-            if (!isMouseMove && catWinCount > 0)
-            {
-                stateOutcome->second = CAT_WIN;
-                return CAT_WIN;
-            }
-            else
+            if (drawCount > 0)
             {
                 stateOutcome->second = DRAW;
                 return DRAW;
+            }
+            else
+            {
+                const int outcome = isMouseMove ? CAT_WIN : MOUSE_WIN;
+                stateOutcome->second = outcome;
+                return outcome;
             }
         }
     };
@@ -119,19 +155,27 @@ namespace
         return numTestCases;
     }
 
+    void consumeUntilDigit(void)
+    {
+        char c = '\0';
+        while ((c = std::cin.peek()) != EOF && !std::isdigit(static_cast<unsigned char>(c)))
+        {
+            std::cin.get();
+        }
+    }
+
     std::vector<int> readline(void)
     {
         while (std::cin.peek() != EOF && std::isspace(std::cin.peek()))
         {
             std::cin.get();
         }
-
         std::vector<int> terms;
         std::stack<int> digits;
         while (std::cin.peek() != EOF)
         {
             const char c = std::cin.get();
-            if (std::isdigit(static_cast<char>(c)))
+            if (std::isdigit(static_cast<unsigned char>(c)))
             {
                 int digit = std::atoi(&c);
                 digits.push(digit);
@@ -160,6 +204,7 @@ namespace
 
     std::vector<std::vector<int>> readGraph(void)
     {
+        consumeUntilDigit();
         int numNodes = 0;
         std::cin >> numNodes;
 
