@@ -16,45 +16,46 @@ namespace
         {
             const int numNodes = graph.size();
             initGameState(numNodes);
-            int lastResult = 0;
-            for (int lastRound = 0; lastRound < numNodes; lastRound++)
+            int gameStateResult = dfsTraversal(graph, {0, MOUSE_IDX, CAT_IDX});
+#ifdef DEBUG
+            if (gameStateResult == UNDEFINED)
             {
-                lastResult = dfsTraversal(graph, {0, MOUSE_IDX, CAT_IDX});
-                if (lastResult != 0)
-                {
-                    return lastResult;
-                }
-                revisitCatAndMouse(numNodes);
+                std::cerr << "Undefined game state returned" << std::endl;
+                exit(1);
             }
-            return lastResult;
+#endif // #ifdef DEBUG
+            if (gameStateResult != DRAW)
+            {
+                return gameStateResult;
+            }
+
+            // revist draw game states
+            for (int lastRound = 0; std::count_if(dp.begin(), dp.end(), [](const auto &it)
+                                                  { return it.second == DRAW; }) >= lastRound;
+                 lastRound++)
+            {
+                for (auto &gameState : dp)
+                {
+                    if (gameState.second != DRAW)
+                    {
+                        continue;
+                    }
+                    gameState.second = UNDEFINED;
+                    dfsTraversal(graph, gameState.first);
+                }
+            }
+            const auto baseGameState = dp.find({0, 1, 2});
+#ifdef DEBUG
+            if (baseGameState == dp.end())
+            {
+                std::cerr << "Could not find baseGameState(0, 1, 2)" << std::endl;
+                exit(1);
+            }
+#endif // #ifdef DEBUG
+            return baseGameState->second;
         }
 
     private:
-        void revisitCatAndMouse(int numNodes)
-        {
-            for (int i = 0; i < numNodes; i++)
-            {
-                for (int j = 0; j < numNodes; j++)
-                {
-                    for (int k = 0; k < 2; k++)
-                    {
-                        const auto outcome = dp.find({k, i, j});
-#ifdef DEBUG
-                        if (outcome == dp.end())
-                        {
-                            perror("could not find expected game state");
-                            exit(1);
-                        }
-#endif // #ifdef DEBUG
-                        if (outcome->second == 0)
-                        {
-                            outcome->second = UNDEFINED;
-                        }
-                    }
-                }
-            }
-        }
-
         void initGameState(int numNodes)
         {
             // initialize dp
@@ -146,7 +147,7 @@ namespace
                 return outcome;
             }
         }
-    };
+    }; // class Solution
 
     int readNumTestCases(void)
     {
