@@ -3,70 +3,63 @@
 
 namespace
 {
+    using GameState = std::tuple<int /*mouseMove*/, int /*mouse idx*/, int /*cat idx*/>;
+
     const int UNDEFINED = -1, DRAW = 0, MOUSE_WIN = 1, CAT_WIN = 2,
               HOLE_IDX = 0, MOUSE_IDX = 1, CAT_IDX = 2;
 
     class Solution
     {
     private:
-        std::map<std::tuple<int /*isMouseMove*/, int /*mouse*/, int /*cat*/>, int /*state*/> dp;
+        std::map<GameState, int /*state*/> dp;
 
     public:
         int catMouseGame(const std::vector<std::vector<int>> &graph)
         {
             const int numNodes = graph.size();
-            initGameState(numNodes);
-            int gameStateResult = dfsTraversal(graph, {0, MOUSE_IDX, CAT_IDX});
-#ifdef DEBUG
-            if (gameStateResult == UNDEFINED)
+            std::deque<GameState> gameStates = makeGameStateQueue(numNodes);
+
+            for (; !gameStates.empty(); gameStates.pop_front())
             {
-                std::cerr << "Undefined game state returned" << std::endl;
-                exit(1);
-            }
-#endif // #ifdef DEBUG
-            if (gameStateResult != DRAW)
-            {
-                return gameStateResult;
+                const auto &[turn, mouseIdx, catIdx] = gameStates.front();
+
+                dfsTraversal(graph, {turn % 2, mouseIdx, catIdx});
             }
 
-            // revist draw game states
-            int lastResult = UNDEFINED;
-            for (int lastRound = 0; std::count_if(dp.begin(), dp.end(), [](const auto &it)
-                                                  { return it.second == DRAW; }) >= lastRound;
-                 lastRound++)
+            if (const auto initialGameState = dp.find({0, MOUSE_IDX, CAT_IDX}); initialGameState != dp.end())
             {
-                std::for_each(dp.begin(), dp.end(), [](auto &gameState)
-                              {
-                    if (gameState.second == DRAW)
-                    {
-                        gameState.second = UNDEFINED;
-                    } });
-                if ((lastResult = dfsTraversal(graph, {0, 1, 2})) != DRAW)
-                {
-                    return lastResult;
-                };
+                return initialGameState->second;
             }
-            return lastResult;
+            else
+            {
+                std::cerr << "something went wrong: initial game state {0, 1, 2} not defined" << std::endl;
+                exit(1);
+            }
         }
 
     private:
-        void initGameState(int numNodes)
+        std::deque<GameState> makeGameStateQueue(int numNodes)
         {
+            std::deque<GameState> gameStates;
+            gameStates.push_back({0, 1, 2});
+
             // initialize dp
             for (auto i = 0; i < numNodes; i++)
             {
                 for (auto j = 0; j < numNodes; j++)
                 {
                     // undirected graph
-                    if (i == 0)
+                    if (i == HOLE_IDX)
                     {
                         dp.insert({{0, i, j}, MOUSE_WIN});
                         dp.insert({{1, i, j}, MOUSE_WIN});
+                        gameStates.push_back({0, i, j});
                     }
                     else if (i == j)
                     {
                         dp.insert({{0, i, j}, CAT_WIN});
                         dp.insert({{1, i, j}, CAT_WIN});
+                        gameStates.push_back({0, i, j});
                     }
                     else
                     {
@@ -75,6 +68,8 @@ namespace
                     }
                 }
             }
+
+            return gameStates;
         }
 
         int dfsTraversal(const std::vector<std::vector<int>> &graph, std::tuple<int, int, int> gameState)
