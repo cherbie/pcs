@@ -30,29 +30,23 @@ namespace
             }
 
             // revist draw game states
+            int lastResult = UNDEFINED;
             for (int lastRound = 0; std::count_if(dp.begin(), dp.end(), [](const auto &it)
                                                   { return it.second == DRAW; }) >= lastRound;
                  lastRound++)
             {
-                for (auto &gameState : dp)
-                {
-                    if (gameState.second != DRAW)
+                std::for_each(dp.begin(), dp.end(), [](auto &gameState)
+                              {
+                    if (gameState.second == DRAW)
                     {
-                        continue;
-                    }
-                    gameState.second = UNDEFINED;
-                    dfsTraversal(graph, gameState.first);
-                }
+                        gameState.second = UNDEFINED;
+                    } });
+                if ((lastResult = dfsTraversal(graph, {0, 1, 2})) != DRAW)
+                {
+                    return lastResult;
+                };
             }
-            const auto baseGameState = dp.find({0, 1, 2});
-#ifdef DEBUG
-            if (baseGameState == dp.end())
-            {
-                std::cerr << "Could not find baseGameState(0, 1, 2)" << std::endl;
-                exit(1);
-            }
-#endif // #ifdef DEBUG
-            return baseGameState->second;
+            return lastResult;
         }
 
     private:
@@ -64,8 +58,21 @@ namespace
                 for (auto j = 0; j < numNodes; j++)
                 {
                     // undirected graph
-                    dp.insert({{0, i, j}, UNDEFINED});
-                    dp.insert({{1, i, j}, UNDEFINED});
+                    if (i == 0)
+                    {
+                        dp.insert({{0, i, j}, MOUSE_WIN});
+                        dp.insert({{1, i, j}, MOUSE_WIN});
+                    }
+                    else if (i == j)
+                    {
+                        dp.insert({{0, i, j}, CAT_WIN});
+                        dp.insert({{1, i, j}, CAT_WIN});
+                    }
+                    else
+                    {
+                        dp.insert({{0, i, j}, UNDEFINED});
+                        dp.insert({{1, i, j}, UNDEFINED});
+                    }
                 }
             }
         }
