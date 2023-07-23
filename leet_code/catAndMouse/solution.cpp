@@ -4,150 +4,107 @@
 namespace
 {
     using GameState = std::tuple<int /*mouseMove*/, int /*mouse idx*/, int /*cat idx*/>;
+    using GameResult = std::pair<GameState, int /*outcome*/>;
 
     const int UNDEFINED = -1, DRAW = 0, MOUSE_WIN = 1, CAT_WIN = 2,
               HOLE_IDX = 0, MOUSE_IDX = 1, CAT_IDX = 2;
 
     class Solution
     {
-    private:
-        std::map<GameState, int /*state*/> dp;
-
     public:
         int catMouseGame(const std::vector<std::vector<int>> &graph)
         {
-            const int numNodes = graph.size();
-            std::deque<GameState> gameStates = makeGameStateQueue(numNodes);
+            int n = graph.size();
+
+            // directed graph to perform topological traversal
+            int graphDegrees[50][50][2];
+            std::map<GameState, int /*outcome*/> dp;
+            std::deque<GameResult> gameStates;
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 1; j < n; j++)
+                {
+
+                    graphDegrees[i][j][0] = graph[i].size();
+                    graphDegrees[i][j][1] = graph[j].size();
+                    for (int k : graph[j])
+                    {
+                        if (k == HOLE_IDX)
+                        {
+                            graphDegrees[i][j][1]--;
+                            break;
+                        }
+                    }
+
+                    for (int k = 0; k < 2; k++)
+                    {
+                        if (i == HOLE_IDX)
+                        {
+                            dp.insert({{k, i, j}, MOUSE_WIN});
+                            gameStates.push_back({{k, i, j}, MOUSE_WIN});
+                        }
+                        else if (i == j)
+                        {
+                            dp.insert({{k, i, j}, CAT_WIN});
+                            gameStates.push_back({{k, i, j}, CAT_WIN});
+                        }
+                        else
+                        {
+                            dp.insert({{k, i, j}, DRAW});
+                        }
+                    }
+                }
+            }
 
             for (; !gameStates.empty(); gameStates.pop_front())
             {
-                const auto &[turn, mouseIdx, catIdx] = gameStates.front();
-
-                dfsTraversal(graph, {turn % 2, mouseIdx, catIdx});
+                const auto &[gameState, outcome] = gameStates.front();
+                const auto &[turn, mouseIdx, catIdx] = gameState;
+                if (catIdx == CAT_IDX && mouseIdx == MOUSE_IDX && turn == 0)
+                {
+                    // at the start point
+                    return outcome;
+                }
+                int prevTurn = 1 - turn; // turn % 2
+                for (int prevMove : graph[prevTurn == 1 ? catIdx : mouseIdx])
+                {
+                    int prevCatIdx = prevTurn == 1 ? prevMove : catIdx;
+                    int prevMouseIdx = prevTurn == 1 ? mouseIdx : prevMove;
+                    if (prevCatIdx == HOLE_IDX)
+                    {
+                        continue;
+                    }
+                    const auto prevOutcome = dp.find({prevTurn, prevMouseIdx, prevCatIdx});
+#ifdef DEBUG
+                    if (prevOutcome == dp.end())
+                    {
+                        std::cerr << "something went wrong" << std::endl;
+                        exit(1);
+                    }
+#endif // #ifdef DEBUG
+                    if (prevOutcome->second == MOUSE_WIN || prevOutcome->second == CAT_WIN)
+                    {
+                        continue;
+                    }
+                    if ((prevTurn == 1 && outcome == CAT_WIN) ||
+                        (prevTurn == 0 && outcome == MOUSE_WIN) ||
+                        --graphDegrees[prevMouseIdx][prevCatIdx][prevTurn] == 0)
+                    {
+                        dp.insert({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
+                        gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
+                    }
+                }
             }
 
-            if (const auto initialGameState = dp.find({0, MOUSE_IDX, CAT_IDX}); initialGameState != dp.end())
+            const auto initialOutcome = dp.find({0, MOUSE_IDX, CAT_IDX});
+#ifdef DEBUG
+            if (initialOutcome == dp.end())
             {
-                return initialGameState->second;
-            }
-            else
-            {
-                std::cerr << "something went wrong: initial game state {0, 1, 2} not defined" << std::endl;
+                std::cerr << "initial outcome not defined" << std::endl;
                 exit(1);
             }
-        }
-
-    private:
-        std::deque<GameState> makeGameStateQueue(int numNodes)
-        {
-            std::deque<GameState> gameStates;
-            gameStates.push_back({0, 1, 2});
-
-            // initialize dp
-            for (auto i = 0; i < numNodes; i++)
-            {
-                for (auto j = 0; j < numNodes; j++)
-                {
-                    // undirected graph
-                    if (i == HOLE_IDX)
-                    {
-                        dp.insert({{0, i, j}, MOUSE_WIN});
-                        dp.insert({{1, i, j}, MOUSE_WIN});
-                        gameStates.push_back({0, i, j});
-                    }
-                    else if (i == j)
-                    {
-                        dp.insert({{0, i, j}, CAT_WIN});
-                        dp.insert({{1, i, j}, CAT_WIN});
-                        gameStates.push_back({0, i, j});
-                    }
-                    else
-                    {
-                        dp.insert({{0, i, j}, UNDEFINED});
-                        dp.insert({{1, i, j}, UNDEFINED});
-                    }
-                }
-            }
-
-            return gameStates;
-        }
-
-        int dfsTraversal(const std::vector<std::vector<int>> &graph, std::tuple<int, int, int> gameState)
-        {
-            const auto &[stepCount, mouseIdx, catIdx] = gameState;
-
-            const auto stateOutcome = dp.find({stepCount % 2, mouseIdx, catIdx});
-#ifdef DEBUG
-            if (stateOutcome == dp.end())
-            {
-                perror("outcome not valid");
-                exit(1);
-            }
-#endif // #ifdef DEBUG
-            if (stateOutcome->second != UNDEFINED)
-            {
-                return stateOutcome->second;
-            }
-
-            if (mouseIdx == catIdx)
-            {
-                stateOutcome->second = CAT_WIN;
-                return CAT_WIN;
-            }
-            else if (mouseIdx == HOLE_IDX)
-            {
-                stateOutcome->second = MOUSE_WIN;
-                return MOUSE_WIN;
-            }
-            else
-            {
-                stateOutcome->second = DRAW;
-            }
-
-            const auto isMouseMove = stepCount % 2 == 0;
-            int drawCount = 0;
-            for (auto const &move : (isMouseMove ? graph[mouseIdx] : graph[catIdx]))
-            {
-                const int mouseMove = isMouseMove ? move : mouseIdx;
-                const int catMove = isMouseMove ? catIdx : move;
-                if (catMove == HOLE_IDX)
-                {
-                    continue;
-                }
-                const int result = dfsTraversal(graph, {stepCount + 1, mouseMove, catMove});
-#ifdef DEBUG
-                if (result == UNDEFINED)
-                {
-                    perror("dfsTraversal resulted in undefined sub-game state result");
-                    exit(1);
-                }
-#endif // #ifdef DEBUG
-                if (isMouseMove && result == MOUSE_WIN)
-                {
-                    stateOutcome->second = MOUSE_WIN;
-                    return MOUSE_WIN;
-                }
-                else if (!isMouseMove && result == CAT_WIN)
-                {
-                    stateOutcome->second = CAT_WIN;
-                    return CAT_WIN;
-                }
-                else if (result == DRAW)
-                {
-                    drawCount++;
-                }
-            }
-            if (drawCount > 0)
-            {
-                stateOutcome->second = DRAW;
-                return DRAW;
-            }
-            else
-            {
-                const int outcome = isMouseMove ? CAT_WIN : MOUSE_WIN;
-                stateOutcome->second = outcome;
-                return outcome;
-            }
+#endif // ifdef DEBUG
+            return initialOutcome->second;
         }
     }; // class Solution
 
