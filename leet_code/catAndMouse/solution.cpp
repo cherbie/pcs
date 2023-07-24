@@ -1,8 +1,11 @@
 #include <bits/stdc++.h>
 #include <algorithm>
 
+#define MAX_GRAPH_SIZE 50
+
 namespace
 {
+
     using GameState = std::tuple<int /*mouseMove*/, int /*mouse idx*/, int /*cat idx*/>;
     using GameResult = std::pair<GameState, int /*outcome*/>;
 
@@ -17,7 +20,7 @@ namespace
             int n = graph.size();
 
             // directed graph to perform topological traversal
-            int graphDegrees[50][50][2];
+            int graphDegrees[MAX_GRAPH_SIZE][MAX_GRAPH_SIZE][2];
             std::map<GameState, int /*outcome*/> dp;
             std::deque<GameResult> gameStates;
             for (int i = 0; i < n; i++)
@@ -60,11 +63,7 @@ namespace
             {
                 const auto &[gameState, outcome] = gameStates.front();
                 const auto &[turn, mouseIdx, catIdx] = gameState;
-                if (catIdx == CAT_IDX && mouseIdx == MOUSE_IDX && turn == 0)
-                {
-                    // at the start point
-                    return outcome;
-                }
+
                 int prevTurn = 1 - turn; // turn % 2
                 for (int prevMove : graph[prevTurn == 1 ? catIdx : mouseIdx])
                 {
@@ -82,16 +81,20 @@ namespace
                         exit(1);
                     }
 #endif // #ifdef DEBUG
-                    if (prevOutcome->second == MOUSE_WIN || prevOutcome->second == CAT_WIN)
+                    if (prevOutcome->second == DRAW)
                     {
-                        continue;
-                    }
-                    if ((prevTurn == 1 && outcome == CAT_WIN) ||
-                        (prevTurn == 0 && outcome == MOUSE_WIN) ||
-                        --graphDegrees[prevMouseIdx][prevCatIdx][prevTurn] == 0)
-                    {
-                        dp.insert({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
-                        gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
+                        if ((prevTurn == 1 && outcome == CAT_WIN) ||
+                            (prevTurn == 0 && outcome == MOUSE_WIN))
+                        {
+                            prevOutcome->second = outcome;
+                            gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
+                        }
+                        else if ((--graphDegrees[prevMouseIdx][prevCatIdx][prevTurn]) == 0)
+                        {
+                            const int lossOutcome = 2 - prevTurn;
+                            prevOutcome->second = lossOutcome;
+                            gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, lossOutcome});
+                        }
                     }
                 }
             }
