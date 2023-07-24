@@ -20,8 +20,9 @@ namespace
             int n = graph.size();
 
             // directed graph to perform topological traversal
-            int graphDegrees[MAX_GRAPH_SIZE][MAX_GRAPH_SIZE][2];
-            std::map<GameState, int /*outcome*/> dp;
+            int graphDegrees[MAX_GRAPH_SIZE/*mouse*/][MAX_GRAPH_SIZE/*cat*/][2/*move*/] = {0};
+            int colours[MAX_GRAPH_SIZE/*mouse*/][MAX_GRAPH_SIZE/*cat*/][2/*move*/] = {0};
+
             std::deque<GameResult> gameStates;
             for (int i = 0; i < n; i++)
             {
@@ -43,17 +44,13 @@ namespace
                     {
                         if (i == HOLE_IDX)
                         {
-                            dp.insert({{k, i, j}, MOUSE_WIN});
+                            colours[i][j][k] = MOUSE_WIN;
                             gameStates.push_back({{k, i, j}, MOUSE_WIN});
                         }
                         else if (i == j)
                         {
-                            dp.insert({{k, i, j}, CAT_WIN});
+                            colours[i][j][k] = CAT_WIN;
                             gameStates.push_back({{k, i, j}, CAT_WIN});
-                        }
-                        else
-                        {
-                            dp.insert({{k, i, j}, DRAW});
                         }
                     }
                 }
@@ -73,41 +70,27 @@ namespace
                     {
                         continue;
                     }
-                    const auto prevOutcome = dp.find({prevTurn, prevMouseIdx, prevCatIdx});
-#ifdef DEBUG
-                    if (prevOutcome == dp.end())
-                    {
-                        std::cerr << "something went wrong" << std::endl;
-                        exit(1);
-                    }
-#endif // #ifdef DEBUG
-                    if (prevOutcome->second == DRAW)
+
+                    const int prevOutcome = colours[prevMouseIdx][prevCatIdx][prevTurn];
+                    if (prevOutcome == DRAW)
                     {
                         if ((prevTurn == 1 && outcome == CAT_WIN) ||
                             (prevTurn == 0 && outcome == MOUSE_WIN))
                         {
-                            prevOutcome->second = outcome;
+                            colours[prevMouseIdx][prevCatIdx][prevTurn] = outcome;
                             gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, outcome});
                         }
                         else if ((--graphDegrees[prevMouseIdx][prevCatIdx][prevTurn]) == 0)
                         {
                             const int lossOutcome = 2 - prevTurn;
-                            prevOutcome->second = lossOutcome;
+                            colours[prevMouseIdx][prevCatIdx][prevTurn] = lossOutcome;
                             gameStates.push_back({{prevTurn, prevMouseIdx, prevCatIdx}, lossOutcome});
                         }
                     }
                 }
             }
 
-            const auto initialOutcome = dp.find({0, MOUSE_IDX, CAT_IDX});
-#ifdef DEBUG
-            if (initialOutcome == dp.end())
-            {
-                std::cerr << "initial outcome not defined" << std::endl;
-                exit(1);
-            }
-#endif // ifdef DEBUG
-            return initialOutcome->second;
+            return colours[MOUSE_IDX][CAT_IDX][0];
         }
     }; // class Solution
 
