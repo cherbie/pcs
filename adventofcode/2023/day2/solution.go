@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -64,6 +64,61 @@ func parseGameInputLine(line string) (games []Game, err error) {
 	}
 
 	return games, nil
+}
+
+func part2() error {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	scanner.Split(bufio.ScanLines)
+
+	const (
+		maxRed   = 12
+		maxGreen = 13
+		maxBlue  = 14
+	)
+
+	type GameOutcome struct {
+		minRed   int
+		minGreen int
+		minBlue  int
+	}
+
+	savedGames := make(map[int]*GameOutcome)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if games, err := parseGameInputLine(line); err != nil {
+			return err
+		} else {
+			for _, game := range games {
+				if savedGames[game.id] == nil {
+					savedGames[game.id] = &GameOutcome{}
+				}
+				prevOutcome := savedGames[game.id]
+
+				prevOutcome.minRed = max(prevOutcome.minRed, game.red)
+				prevOutcome.minGreen = max(prevOutcome.minGreen, game.green)
+				prevOutcome.minBlue = max(prevOutcome.minBlue, game.blue)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	products := make([]int, len(savedGames))
+	for gameId, state := range savedGames {
+		products[gameId-1] = state.minRed * state.minGreen * state.minBlue
+	}
+
+	sumOfProducts := 0
+	for _, product := range products {
+		sumOfProducts += product
+	}
+
+	fmt.Println("Sum of products: ", sumOfProducts)
+	return nil
 }
 
 func part1() error {
