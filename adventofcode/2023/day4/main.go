@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -35,7 +35,6 @@ func readGames() (games []Game, err error) {
 		if matches := numbersRegex.FindAllStringSubmatch(line, -1); matches == nil {
 			return nil, errors.New("error: could not match regexp")
 		} else {
-			fmt.Println(matches)
 			game := Game{}
 			seenPipe := false
 			for idx, submatches := range matches {
@@ -45,7 +44,6 @@ func readGames() (games []Game, err error) {
 				}
 
 				submatch := strings.Trim(submatches[0], " ")
-				fmt.Print(submatch, " ")
 				if submatch == "|" {
 					seenPipe = true
 					continue
@@ -58,7 +56,6 @@ func readGames() (games []Game, err error) {
 					game.winners = append(game.winners, numberValue)
 				}
 			}
-			fmt.Println()
 			games = append(games, game)
 		}
 	}
@@ -95,8 +92,6 @@ func part1() error {
 		return err
 	}
 
-	fmt.Println(games)
-
 	gameOutcomes := calcGameOutcomes(games)
 
 	sumOfGamePoints := 0
@@ -107,6 +102,48 @@ func part1() error {
 		}
 	}
 	fmt.Println("Sum of game points: ", sumOfGamePoints)
+
+	return nil
+}
+
+type ScratchCard struct {
+	count int64
+}
+
+func calcScratchCardOutcomes(games []Game) []ScratchCard {
+	scratchCards := make([]ScratchCard, len(games))
+	gameOutcomes := calcGameOutcomes(games)
+
+	for idx, outcome := range gameOutcomes {
+		scratchCards[idx].count += 1
+
+		if outcome.wins < 1 {
+			continue
+		}
+
+		for j := 0; int64(j) < scratchCards[idx].count; j++ {
+			for i := 1; i <= outcome.wins; i++ {
+				scratchCards[idx+i].count += 1
+			}
+		}
+	}
+	return scratchCards
+}
+
+func part2() error {
+	games, err := readGames()
+	if err != nil {
+		return err
+	}
+
+	scratchCards := calcScratchCardOutcomes(games)
+
+	sumOfScratchCards := int64(0)
+	for _, card := range scratchCards {
+		sumOfScratchCards += card.count
+	}
+
+	fmt.Println("Sum of scratch cards: ", sumOfScratchCards)
 
 	return nil
 }
