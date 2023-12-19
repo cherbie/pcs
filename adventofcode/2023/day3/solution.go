@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -86,6 +86,86 @@ func initPositionsMap(field *Field) PosMap {
 
 func isSymbol(e byte) bool {
 	return !(('0' <= e && e <= '9') || e == '.')
+}
+
+func part2() error {
+	field, err := readField()
+	if err != nil {
+		return err
+	}
+
+	positions := initPositionsMap(field)
+
+	matches := numbersRegex.FindAllStringSubmatchIndex(string(field.field), -1)
+	for _, matchIdxs := range matches {
+		var (
+			low  = matchIdxs[0]
+			high = matchIdxs[1]
+		)
+		fmt.Printf("number: %s\n", field.field[low:high])
+		num, err := strconv.ParseInt(string(field.field[low:high]), 10, 0)
+		if err != nil {
+			return err
+		}
+
+		group := &PosGroup{num, low, high - 1}
+		for idx := low; idx < high; idx++ {
+			positions[idx].group = group
+		}
+	}
+
+	// map symbols to gears
+	symbol2GearMap := make(map[int][](*PosInfo))
+	for idx, el := range field.field {
+		if !isSymbol(el) {
+			continue
+		}
+
+		for _, adjacentIdx := range getAdjacentIndices(idx, field.rows, field.cols) {
+			adjPos := positions[adjacentIdx]
+			if adjPos.group != nil {
+				// has a gear
+				symbol2GearMap[idx] = append(symbol2GearMap[idx], adjPos)
+				fmt.Println("symbol: ", string(el), " - ", idx, " | ", adjacentIdx, " adjacent: ", adjPos, " group: ", adjPos.group)
+
+			}
+		}
+	}
+
+	var sumOfGear int64 = 0
+	for _, gearPos := range symbol2GearMap {
+
+		// find set of "gears"
+		gearSet := make(map[*PosGroup]bool)
+		for _, pos := range gearPos {
+			if !pos.counted {
+				gearSet[pos.group] = true
+			}
+		}
+
+		if len(gearSet) == 2 {
+			var gearRatio int64 = 0
+			for gearInfo := range gearSet {
+				if gearRatio == 0 {
+					gearRatio += gearInfo.value
+				} else {
+					gearRatio *= gearInfo.value
+				}
+			}
+			sumOfGear += gearRatio
+
+			// set related as counted
+			for _, pos := range gearPos {
+				for childIdx := pos.group.minIdx; childIdx <= pos.group.maxIdx; childIdx++ {
+					positions[childIdx].counted = true
+				}
+			}
+		}
+	}
+
+	fmt.Println("Sum of gear ratios: ", sumOfGear)
+
+	return nil
 }
 
 func part1() error {
