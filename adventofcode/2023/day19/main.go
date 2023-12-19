@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -215,5 +215,16 @@ func part1() error {
 	}
 
 	fmt.Println("Sum of part ratings: ", sumOfRatings)
+	return nil
+}
+
+func part2() error {
+	workflows, _, err := readInput()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(workflows)
+
 	return nil
 }
