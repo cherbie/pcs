@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -52,7 +52,20 @@ func part1() error {
 		return err
 	}
 
-	minCost := minValuePath(*heatMap)
+	minCost := minValuePath(*heatMap, 1, 3)
+
+	fmt.Println("Min cost: ", minCost)
+
+	return nil
+}
+
+func part2() error {
+	heatMap, err := readCostMap()
+	if err != nil {
+		return err
+	}
+
+	minCost := minValuePath(*heatMap, 4, 10)
 
 	fmt.Println("Min cost: ", minCost)
 
@@ -65,10 +78,6 @@ var (
 	DOWN      = [2]int{0, 1}
 	LEFT      = [2]int{-1, 0}
 	UP        = [2]int{0, -1}
-)
-
-const (
-	MAX_MOVEMENT = 3
 )
 
 type Location struct {
@@ -118,7 +127,7 @@ type Vector struct {
 	direction Direction
 }
 
-func minValuePath(heatMap HeatMap) int {
+func minValuePath(heatMap HeatMap, minMovement, maxMovement int) int {
 	hq := make(HeatQueue, 0)
 	heap.Init(&hq)
 
@@ -137,7 +146,6 @@ func minValuePath(heatMap HeatMap) int {
 		} else {
 			seenSet[Vector{idx, location.direction}] = true
 		}
-		fmt.Println("idx: ", idx, ":", location.position, "location: ", location, "(", heatMap.cols, ", ", heatMap.rows, ")", "value: ", heatMap.field[idx])
 
 		directions := [2]Direction{UNDEFINED, UNDEFINED}
 		switch location.direction {
@@ -154,8 +162,7 @@ func minValuePath(heatMap HeatMap) int {
 
 		for _, direction := range directions {
 			prevHeat := location.heat
-			for k := 1; k <= MAX_MOVEMENT; k++ {
-				// fmt.Println(k*0, " | ", k*1, " | ", direction[0], ", ", direction[1])
+			for k := 1; k <= maxMovement; k++ {
 				pos := Position{location.position[0] + (k * direction[0]), location.position[1] + (k * direction[1])}
 
 				if pos[0] < 0 || pos[1] < 0 || pos[0] >= heatMap.cols || pos[1] >= heatMap.rows {
@@ -163,11 +170,11 @@ func minValuePath(heatMap HeatMap) int {
 				}
 
 				newLoc := Location{pos, direction, -1}
-
 				prevHeat += heatMap.field[newLoc.GetIndex(heatMap.cols)]
 				newLoc.heat = prevHeat
-				fmt.Println("New location -", newLoc)
-				heap.Push(&hq, &newLoc)
+				if k >= minMovement {
+					heap.Push(&hq, &newLoc)
+				}
 			}
 		}
 	}
