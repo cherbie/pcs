@@ -1,2 +1,1 @@
-# pcs
-Programming Competition Society
+# Programming Competition Society
