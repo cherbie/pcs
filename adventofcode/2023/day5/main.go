@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if err := part1(); err != nil {
+	if err := part2(); err != nil {
 		panic(err)
 	}
 }
@@ -161,6 +161,64 @@ func calcSeedLocation(seed int64, ruleset RuleSetMap) (location int64, err error
 	minLocation := MAX_INT
 	snapshots := make([]Snapshot, 0, 10)
 	snapshots = append(snapshots, Snapshot{SEED, seed})
+	for len(snapshots) > 0 {
+		current := snapshots[0]
+		snapshots = snapshots[1:]
+
+		if current.t == LOCATION {
+			minLocation = min(minLocation, current.value)
+			continue
+		}
+
+		newSnapshots := make([]Snapshot, 0, len(ruleset[current.t]))
+		var mappedType uint8 = SEED
+		for _, rule := range ruleset[current.t] {
+			mappedType = rule.t
+			if rule.src <= current.value && current.value < (rule.src+rule.length) {
+				value := rule.dest + current.value - rule.src
+				newSnapshots = append(newSnapshots, Snapshot{rule.t, value})
+			}
+		}
+		if len(newSnapshots) == 0 {
+			snapshots = append(snapshots, Snapshot{mappedType, current.value})
+		} else {
+			snapshots = append(snapshots, newSnapshots...)
+		}
+	}
+	return minLocation, nil
+}
+
+func part2() error {
+	context, err := readSeedContext()
+	if err != nil {
+		return err
+	}
+
+	minLocation := MAX_INT
+	for i := 0; i < len(context.seeds); i = i + 2 {
+		fmt.Print(".")
+		if location, err := calcSeedRangeMinLocation(SeedRange{context.seeds[i], context.seeds[i+1]}, context.ruleset); err != nil {
+			return err
+		} else {
+			minLocation = min(minLocation, location)
+		}
+	}
+
+	fmt.Println("Min location: ", minLocation)
+	return nil
+}
+
+type SeedRange struct {
+	value  int64
+	length int64
+}
+
+func calcSeedRangeMinLocation(seed SeedRange, ruleset RuleSetMap) (location int64, err error) {
+	minLocation := MAX_INT
+	snapshots := make([]Snapshot, 0, 10)
+	for i := int64(0); i < seed.length; i++ {
+		snapshots = append(snapshots, Snapshot{SEED, seed.value + i})
+	}
 	for len(snapshots) > 0 {
 		current := snapshots[0]
 		snapshots = snapshots[1:]
