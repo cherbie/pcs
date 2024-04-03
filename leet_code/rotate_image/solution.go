@@ -5,23 +5,14 @@ import "fmt"
 func rotate(matrix [][]int) {
 	size := len(matrix)
 
-	// swap along row
 	for i := 0; i < size; i++ {
-		for j := 0; j < size/2; j++ {
-			k := size - j - 1
-			tmp := int(matrix[i][j])
-			matrix[i][j] = matrix[i][k]
-			matrix[i][k] = tmp
+		// Transpose of row
+		for j := i; j < size; j++ {
+			matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
 		}
-	}
-
-	// swap non-transposed diagonal
-	for i := 0; i < size; i++ {
-		for j := 0; i+j < size-1; j++ {
-			ki, kj := size-1-i, size-1-j
-			tmp := int(matrix[kj][ki])
-			matrix[kj][ki] = matrix[i][j]
-			matrix[i][j] = tmp
+		// flipping the row
+		for j, k := 0, size-1; j < k; j, k = j+1, k-1 {
+			matrix[i][j], matrix[i][k] = matrix[i][k], matrix[i][j]
 		}
 	}
 }
