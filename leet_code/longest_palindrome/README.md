@@ -1,3 +1,3 @@
-# [LeetCode] Longest Palindromic String
+# [LeetCode] Longest Palindrome
 
-[Longest palindromic string](https://leetcode.com/problems/longest-palindromic-substring/)
+> https://leetcode.com/problems/longest-palindrome/
