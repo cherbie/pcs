@@ -2,39 +2,58 @@ package main
 
 import "fmt"
 
-func longestPalindrome(str string) string {
-	n := len(str)
+func longestPalindrome(s string) string {
+	p := mancher_odd(s)
 
-	dp := make([][]int, 2) // even-odd dp
-	dp[0] = make([]int, n)
-	dp[1] = make([]int, n)
-
-	// initialize for
-	for i := 0; i < n; i++ {
-		dp[1][i] = 1
-	}
+	fmt.Println(p)
 
 	start, maxLen := 0, 1
-	for s := 2; s <= n; s++ {
-		l, r, c, polarity := 0, s-1, s/2, s%2
-
-		for r < n {
-			if str[l] == str[r] && dp[polarity][c] >= s-2 {
-				dp[polarity][c] = dp[polarity][c] + 2
-				if maxLen < dp[polarity][c] {
-					maxLen = dp[polarity][c]
-					start = l
-				}
-			}
-			l++
-			r++
-			c++
+	for i, count := range p {
+		size := (count << 1) - 1
+		if size > maxLen {
+			start = i - count + 1
+			maxLen = size
 		}
 	}
 
-	return str[start : start+maxLen]
+	return s[start : start+maxLen]
+}
+
+func mancher_odd(s string) []int {
+	n := len(s)
+	s = "^" + s + "$"
+	p := make([]int, n+2)
+
+	l, r := 0, 1 // right-most palindrome bounds (l,r)
+	for i := 1; i <= n; i++ {
+		fmt.Printf("%d: ", i)
+		if i <= r {
+			// use previously computed results for palindrome
+			j := l + (r - i) // mirror point of i relative to centre of (l, r)
+			if j-p[j] <= l {
+				// special case: mirror point less than left bound (l)
+				p[i] = r - i
+			} else {
+				p[i] = p[j]
+			}
+		}
+
+		fmt.Println(p)
+
+		for s[i-p[i]] == s[i+p[i]] {
+			fmt.Printf("(%c,%c)|(%d,%d)\n", s[i-p[i]], s[i+p[i]], i-p[i], i+p[i])
+			p[i]++
+		}
+
+		if r < (i + p[i]) {
+			r = i + p[i]
+			l = i - p[i]
+		}
+	}
+
+	return p[1 : len(p)-1]
 }
 
 func main() {
-	fmt.Println("i: babad -> output: ", longestPalindrome("babad"))
+	fmt.Println("odd case: abababc -> output: ", longestPalindrome("abababc"))
 }
